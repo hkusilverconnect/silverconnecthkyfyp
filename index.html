@@ -242,6 +242,14 @@
   .pics-body h3{font-size:14px; margin:16px 0 6px;}
   .pics-body p, .pics-body li{font-size:12.5px; color:var(--muted); line-height:1.55;}
   .pics-body{max-height:60vh; overflow-y:auto; padding-right:4px; margin-bottom:14px;}
+
+  .week-strip{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;}
+  .week-day{flex:1; min-width:36px; text-align:center; background:var(--bg); border-radius:8px; padding:6px 2px;}
+  .week-day .d{font-size:10px; font-weight:800; color:var(--muted);}
+  .week-day .m{font-size:16px; line-height:1.2; margin-top:2px;}
+  .week-day.on{background:rgba(107,175,146,0.18);}
+  .week-day.off{opacity:.55;}
+  .self-block{background:var(--surface); border-radius:var(--r-md); padding:16px; box-shadow:var(--sh-sm); margin-bottom:16px;}
 </style>
 </head>
 <body>
@@ -255,8 +263,35 @@ const NEEDS_SETUP = !window.SUPABASE_URL || window.SUPABASE_URL.includes("YOUR-P
 const sb = NEEDS_SETUP ? null : window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 let session = null;
 let busy = false;              // true while an RPC call is in flight
-let caretakerData = null;      // cached array from get_my_families (one row per linked senior)
+let caretakerData = null;      // linked family members (both roles)
 let caretakerLoading = false;
+let myWeekHistory = null;      // 7-day history for the logged-in user
+let memberHistory = {};        // phone -> 7-day rows
+
+function renderWeekStrip(rows){
+  if(!rows || !rows.length) return '<div class="week-strip"><span style="font-size:12px;color:var(--muted);">No history yet</span></div>';
+  const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return '<div class="week-strip">' + rows.map(r => {
+    const dt = new Date(r.day + 'T12:00:00');
+    const label = names[dt.getDay()];
+    const on = r.checked_in;
+    const emo = r.mood_emoji || (on ? '✓' : '·');
+    return `<div class="week-day ${on?'on':'off'}" title="${r.mood_label||''}"><div class="d">${label}</div><div class="m">${emo}</div></div>`;
+  }).join('') + '</div>';
+}
+
+async function loadMyWeekHistory(){
+  if(!session) return;
+  const {data, error} = await sb.rpc('get_week_history', {p_phone: session.phone});
+  if(!error) myWeekHistory = data || [];
+  render();
+}
+
+async function loadMemberHistory(phone){
+  if(memberHistory[phone]) return;
+  const {data, error} = await sb.rpc('get_week_history', {p_phone: phone});
+  if(!error){ memberHistory[phone] = data || []; render(); }
+}
 
 /* ---------- External-link confirmation (3rd-party redirect declaration) ---------- */
 let extLinkUrl = null, extLinkName = "", extLinkDomain = "";
@@ -284,8 +319,8 @@ async function submitAddFamily(){
       : "Something went wrong. Please try again.";
     render(); return;
   }
-  addFamSuccess = `Linked to ${data[0].senior_name}'s family!`;
-  caretakerData = null; // force refresh
+  addFamSuccess = `Linked to ${(data && data[0] && data[0].senior_name) || 'family'}!`;
+  caretakerData = null; memberHistory = {}; // force refresh
   render();
   loadCaretakerData();
 }
@@ -388,7 +423,7 @@ async function submitLogin(){
     return;
   }
   const u = data[0];
-  session = {phone:u.phone, name:u.name, role:u.role, familyCode:u.family_code};
+  session = {phone:u.phone, name:u.name, role:u.role, familyCode:u.family_code}; myWeekHistory=null; memberHistory={}; caretakerData=null;
   authView="welcome"; loginPhone=""; loginPin=""; authError="";
   render();
 }
@@ -565,95 +600,162 @@ function renderRegister(){
 
 /* ================= APP RENDERERS (unchanged content, role-driven mode) ================= */
 function heartbeatSenior(){
+  if(myWeekHistory===null) loadMyWeekHistory();
+  if(caretakerData===null && !caretakerLoading) loadCaretakerData();
+  const famSection = !caretakerData ? '' : caretakerData.length===0 ? `
+      <div class="card"><h3>Family members</h3><p>Add someone with their Family Code to see their check-ins here.</p></div>
+      <button class="big-btn" onclick="openAddFamily()">➕ Add Family Member</button>
+    ` : caretakerData.map(d=>{
+      const isIn = !!d.last_checkin;
+      const t = isIn ? new Date(d.last_checkin).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'}) : null;
+      const hist = memberHistory[d.senior_phone];
+      if(d.senior_phone && !hist) loadMemberHistory(d.senior_phone);
+      return `
+      <div class="fam-card" style="flex-wrap:wrap;">
+        <div class="fam-emo ${isIn?'checked':'pending'}">${isIn?'😊':'⏰'}</div>
+        <div class="fam-info"><div class="fam-name">${d.label || d.senior_name}</div>
+          <div class="fam-relation">${isIn?`Last check-in ${t}`:'No check-in yet today'}</div>
+          ${hist?renderWeekStrip(hist):'<div style="font-size:11px;color:var(--muted);margin-top:6px;">Loading 7-day history…</div>'}
+        </div>
+      </div>`;
+    }).join('');
   return `
     <div class="hero rose-sage"><span class="hero-label">Daily Safety Check-In</span></div>
     <h1 class="page-title">I'm Okay</h1>
     <p class="page-sub">Let your family know you're safe with one tap</p>
     <div class="heart-wrap">
       <button class="heart-btn ${checkedIn?'sent':''}" onclick="sendCheckIn()" aria-label="Tap to let your family know you are okay">${checkedIn?'✓':'💓'}</button>
-      <div class="success-msg ${checkedIn?'show':''}" role="status">Sent to 3 family members</div>
+      <div class="success-msg ${checkedIn?'show':''}" role="status">Check-in saved</div>
     </div>
-    <div class="card"><h3>For You</h3><p>One simple tap. No typing needed. Your family will know you're safe.</p></div>
-    <div class="card"><h3>For Family</h3><p>Daily peace of mind. Gentle reminder if you miss a check-in.</p></div>
+    <div class="card"><h3>Your last 7 days</h3>${myWeekHistory?renderWeekStrip(myWeekHistory):'<p>Loading…</p>'}</div>
+    <div class="section-title">Family dashboard</div>
+    <div style="display:flex;justify-content:flex-end;"><button class="link-btn" style="width:auto;padding:6px 10px;" onclick="reloadCaretakerData()">⟳ Refresh</button></div>
+    ${famSection}
   `;
 }
 function heartbeatCaretaker(){
+  if(myWeekHistory===null) loadMyWeekHistory();
+  if(!caretakerData && !caretakerLoading) loadCaretakerData();
+  const selfBlock = `
+    <div class="self-block">
+      <h3 style="margin:0 0 8px;">Your check-in</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">You can check in too — family who linked you will see it.</p>
+      <div class="heart-wrap" style="margin:0;">
+        <button class="heart-btn ${checkedIn?'sent':''}" onclick="sendCheckIn()" aria-label="Check in">${checkedIn?'✓':'💓'}</button>
+        <div class="success-msg ${checkedIn?'show':''}" role="status">Check-in saved</div>
+      </div>
+      <div style="margin-top:12px;"><div style="font-size:12px;font-weight:800;color:var(--muted);">Your last 7 days</div>
+      ${myWeekHistory?renderWeekStrip(myWeekHistory):'<p style="font-size:12px;color:var(--muted);">Loading…</p>'}</div>
+    </div>`;
   if(!caretakerData){
-    return `<h1 class="page-title">Family Dashboard</h1><p class="page-sub">Loading your family's status…</p>`;
+    return selfBlock + `<h1 class="page-title">Family Dashboard</h1><p class="page-sub">Loading your family's status…</p>`;
   }
   if(caretakerData.length===0){
-    return `
+    return selfBlock + `
       <h1 class="page-title">Family Dashboard</h1>
       <p class="page-sub">You're not linked to anyone yet</p>
-      <div class="card"><h3>Get Started</h3><p>Ask your family member to open their account's Family Code, then tap your profile → <strong>Add Family Member</strong> and enter it.</p></div>
+      <div class="card"><h3>Get Started</h3><p>Ask them for their Family Code, then <strong>Add Family Member</strong>.</p></div>
       <button class="big-btn" onclick="openAddFamily()">➕ Add Family Member</button>
     `;
   }
   const cards = caretakerData.map(d=>{
     const isIn = !!d.last_checkin;
-    const t = isIn ? new Date(d.last_checkin).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'}) : null;
+    const tm = isIn ? new Date(d.last_checkin).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'}) : null;
+    const hist = memberHistory[d.senior_phone];
+    if(d.senior_phone && !hist) loadMemberHistory(d.senior_phone);
     return `
-    <div class="fam-card">
+    <div class="fam-card" style="flex-wrap:wrap;">
       <div class="fam-emo ${isIn?'checked':'pending'}">${isIn?'😊':'⏰'}</div>
-      <div class="fam-info"><div class="fam-name">${d.label || d.senior_name}</div><div class="fam-relation">${isIn?`Checked in ${t}`:'No check-in yet today'}</div></div>
+      <div class="fam-info"><div class="fam-name">${d.label || d.senior_name}</div>
+        <div class="fam-relation">${isIn?`Last check-in ${tm}`:'No check-in yet today'}</div>
+        ${hist?renderWeekStrip(hist):'<div style="font-size:11px;color:var(--muted);margin-top:6px;">Loading 7-day history…</div>'}
+      </div>
     </div>`;
   }).join('');
   const anyAlert = caretakerData.some(d=>!d.last_checkin);
-  return `
+  return selfBlock + `
     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-      <div><h1 class="page-title" style="margin-bottom:0;">Family Dashboard</h1><p class="page-sub">Real-time status for ${caretakerData.length} linked ${caretakerData.length===1?'member':'members'}</p></div>
+      <div><h1 class="page-title" style="margin-bottom:0;">Family Dashboard</h1><p class="page-sub">${caretakerData.length} linked · last 7 days</p></div>
       <button class="link-btn" style="width:auto; padding:6px 10px; margin-top:2px;" onclick="reloadCaretakerData()">⟳ Refresh</button>
     </div>
-    ${anyAlert ? `<div class="alert-banner"><span class="ic">⚠️</span><div><div class="title">Someone hasn't checked in yet</div><div class="sub">See below and consider giving them a call</div></div></div>` : ''}
+    ${anyAlert ? `<div class="alert-banner"><span class="ic">⚠️</span><div><div class="title">Someone hasn't checked in yet today</div><div class="sub">See the 7-day strip below</div></div></div>` : ''}
     ${cards}
-    <div class="card insight-card"><h3>📊 Live Data</h3><p>Pulled straight from your Supabase database — no mock numbers.</p></div>
   `;
 }
 function statusSenior(){
+  if(myWeekHistory===null) loadMyWeekHistory();
+  if(caretakerData===null && !caretakerLoading) loadCaretakerData();
   const grid = moods.map((m,i)=>`
     <button class="emoji-btn ${selectedMood===i?'selected':''}" data-tone="${m.tone}" onclick="selectMood(${i})" aria-pressed="${selectedMood===i}" aria-label="${m.label}">
       <span class="e">${m.emoji}</span><span class="l">${m.label}</span></button>`).join('');
+  const fam = !caretakerData ? '' : caretakerData.length===0 ? `
+      <div class="card"><h3>Family moods</h3><p>Link family members to see their emoji history.</p></div>
+    ` : caretakerData.map(d=>{
+      const hist = memberHistory[d.senior_phone];
+      if(d.senior_phone && !hist) loadMemberHistory(d.senior_phone);
+      const hasMood = !!d.last_mood_emoji;
+      return `<div class="card">
+        <div style="font-weight:800;font-size:13.5px;">${d.label||d.senior_name}${hasMood?` · ${d.last_mood_emoji} ${d.last_mood_label}`:''}</div>
+        ${hist?renderWeekStrip(hist):'<div style="font-size:11px;color:var(--muted);">Loading…</div>'}
+      </div>`;
+    }).join('');
   return `
     <h1 class="page-title">How Are You Feeling?</h1>
     <p class="page-sub">Share your mood with your family</p>
     <div class="emoji-grid">${grid}</div>
     <button class="share-btn ${selectedMood!==null?'ready':''}" onclick="shareMood()">Share with Family</button>
     <div class="success-msg ${moodShared?'show':''}" style="margin-top:14px;" role="status">Shared with your family!</div>
+    <div class="card" style="margin-top:16px;"><h3>Your mood · last 7 days</h3>${myWeekHistory?renderWeekStrip(myWeekHistory):'<p>Loading…</p>'}</div>
+    <div class="section-title">Family mood board</div>
+    ${fam}
   `;
 }
 function statusCaretaker(){
+  if(myWeekHistory===null) loadMyWeekHistory();
+  if(!caretakerData && !caretakerLoading) loadCaretakerData();
+  const grid = moods.map((m,i)=>`
+    <button class="emoji-btn ${selectedMood===i?'selected':''}" data-tone="${m.tone}" onclick="selectMood(${i})" aria-pressed="${selectedMood===i}" aria-label="${m.label}">
+      <span class="e">${m.emoji}</span><span class="l">${m.label}</span></button>`).join('');
+  const selfMood = `
+    <h1 class="page-title">How Are You Feeling?</h1>
+    <p class="page-sub">Share your mood — and see family history</p>
+    <div class="emoji-grid">${grid}</div>
+    <button class="share-btn ${selectedMood!==null?'ready':''}" onclick="shareMood()">Share with Family</button>
+    <div class="success-msg ${moodShared?'show':''}" style="margin-top:14px;" role="status">Shared!</div>
+    <div class="card" style="margin-top:16px;"><h3>Your mood · last 7 days</h3>${myWeekHistory?renderWeekStrip(myWeekHistory):'<p>Loading…</p>'}</div>
+  `;
   if(!caretakerData){
-    return `<h1 class="page-title">Family Mood Board</h1><p class="page-sub">Loading…</p>`;
+    return selfMood + `<p class="page-sub">Loading family…</p>`;
   }
   if(caretakerData.length===0){
-    return `
-      <h1 class="page-title">Family Mood Board</h1>
-      <p class="page-sub">You're not linked to anyone yet</p>
-      <div class="card"><h3>Get Started</h3><p>Ask your family member for their Family Code, then tap your profile → <strong>Add Family Member</strong>.</p></div>
+    return selfMood + `
+      <div class="section-title">Family</div>
+      <div class="card"><h3>Get Started</h3><p>Add a Family Code to see their moods.</p></div>
       <button class="big-btn" onclick="openAddFamily()">➕ Add Family Member</button>
     `;
   }
   const cards = caretakerData.map(d=>{
     const hasMood = !!d.last_mood_emoji;
-    const mt = hasMood ? new Date(d.last_mood_time).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'}) : null;
+    const hist = memberHistory[d.senior_phone];
+    if(d.senior_phone && !hist) loadMemberHistory(d.senior_phone);
     return `
     <div class="card">
       <div style="display:flex; align-items:center; gap:12px;">
-        ${hasMood ? `<span style="font-size:30px;">${d.last_mood_emoji}</span>` : `<span style="font-size:30px;">❔</span>`}
-        <div>
+        <span style="font-size:30px;">${hasMood?d.last_mood_emoji:'❔'}</span>
+        <div style="flex:1;">
           <div style="font-weight:800; font-size:13.5px;">${d.label || d.senior_name}${hasMood?` · ${d.last_mood_label}`:''}</div>
-          <div style="font-size:12px; color:var(--muted);">${hasMood?mt:'No mood shared yet'}</div>
+          <div style="font-size:12px; color:var(--muted);">${hasMood?'Latest mood':'No mood shared yet'}</div>
         </div>
       </div>
+      ${hist?renderWeekStrip(hist):'<div style="font-size:11px;color:var(--muted);margin-top:8px;">Loading 7-day history…</div>'}
     </div>`;
   }).join('');
-  return `
-    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-      <div><h1 class="page-title" style="margin-bottom:0;">Family Mood Board</h1><p class="page-sub">Latest shared moods</p></div>
-      <button class="link-btn" style="width:auto; padding:6px 10px; margin-top:2px;" onclick="reloadCaretakerData()">⟳ Refresh</button>
+  return selfMood + `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:8px;">
+      <div class="section-title" style="margin:0;">Family mood board</div>
+      <button class="link-btn" style="width:auto; padding:6px 10px;" onclick="reloadCaretakerData()">⟳ Refresh</button>
     </div>
     ${cards}
-    <div class="card insight-card"><h3>🔍 Live Data</h3><p>Each card reflects the most recent row in the <code>moods</code> table for that family member.</p></div>
   `;
 }
 function marketplaceSenior(){
@@ -697,7 +799,7 @@ async function sendCheckIn(){
   busy = true; render();
   const {error} = await sb.rpc('send_checkin', {p_phone: session.phone});
   busy = false;
-  if(!error){ checkedIn = true; }
+  if(!error){ checkedIn = true; myWeekHistory=null; loadMyWeekHistory(); }
   render();
 }
 function selectMood(i){ selectedMood=i; moodShared=false; render(); }
@@ -707,7 +809,7 @@ async function shareMood(){
   busy = true; render();
   const {error} = await sb.rpc('share_mood', {p_phone: session.phone, p_emoji:m.emoji, p_label:m.label});
   busy = false;
-  if(!error){ moodShared = true; }
+  if(!error){ moodShared = true; myWeekHistory=null; loadMyWeekHistory(); }
   render();
 }
 async function loadCaretakerData(){
@@ -715,19 +817,23 @@ async function loadCaretakerData(){
   caretakerLoading = true;
   const {data, error} = await sb.rpc('get_my_families', {p_phone: session.phone});
   caretakerLoading = false;
-  if(!error){ caretakerData = data || []; }
+  if(!error){
+    caretakerData = data || [];
+    (caretakerData||[]).forEach(d => { if(d.senior_phone) loadMemberHistory(d.senior_phone); });
+  }
   render();
 }
-function reloadCaretakerData(){ caretakerData = null; render(); loadCaretakerData(); }
+function reloadCaretakerData(){ caretakerData = null; memberHistory = {}; myWeekHistory = null; render(); loadCaretakerData(); loadMyWeekHistory(); }
 function setTab(t){ tab=t; profileMenuOpen=false; render(); }
 
 function renderApp(){
   const mode = session.role;
   const initials = session.name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
   const roleLabel = mode==='senior' ? 'Senior' : 'Caretaker';
-  if(mode==='caretaker' && (tab==='heartbeat'||tab==='status') && !caretakerData && !caretakerLoading){
+  if((tab==='heartbeat'||tab==='status') && !caretakerData && !caretakerLoading){
     loadCaretakerData();
   }
+  if((tab==='heartbeat'||tab==='status') && myWeekHistory===null){ loadMyWeekHistory(); }
   const map = {
     'heartbeat-senior':heartbeatSenior,'heartbeat-caretaker':heartbeatCaretaker,
     'status-senior':statusSenior,'status-caretaker':statusCaretaker,
@@ -754,9 +860,8 @@ function renderApp(){
             <div style="padding:0 10px 8px; font-size:12.5px;">
               ${myCaretakers===null ? 'Loading…' : myCaretakers.length===0 ? 'None yet — share your code above.' : myCaretakers.map(c=>`<div style="padding:3px 0;">👤 ${c.name}</div>`).join('')}
             </div>
-          ` : `
-            <button class="item" onclick="openAddFamily()">➕ Add Family Member</button>
-          `}
+          ` : ''}
+          <button class="item" onclick="openAddFamily()">➕ Add Family Member</button>
           <hr>
           <button class="item danger" onclick="logout()">Log Out</button>
         </div>
