@@ -1,5 +1,5 @@
-const CACHE = "silverconnect-v1";
-const ASSETS = ["./", "./index.html", "./manifest.json"];
+const CACHE = "silverconnect-v3";
+const ASSETS = ["./", "./index.html", "./manifest.json", "./config.js"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
