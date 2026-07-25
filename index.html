@@ -113,7 +113,7 @@
   .brand-text .name{font-family:'Lora',serif; font-weight:700; font-size:16px; line-height:1.1;}
   .brand-text .tag{font-size:10px; color:var(--muted); letter-spacing:.02em;}
 
-  .profile-wrap{position:relative;}
+  .profile-wrap{position:relative;display:flex;align-items:center;gap:6px;}
   .profile-chip{display:flex; align-items:center; gap:8px; background:#fff; border:1px solid rgba(61,44,30,0.08); border-radius:999px; padding:6px 14px 6px 6px; cursor:pointer; box-shadow:var(--sh-sm);}
   .profile-avatar{width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;}
   .profile-name{font-size:12.5px; font-weight:800; line-height:1.1; text-align:left;}
@@ -313,10 +313,14 @@ async function submitAddFamily(){
   const {data, error} = await sb.rpc('link_additional_family', {p_phone:session.phone, p_code:addFamCode, p_label: addFamLabel.trim()||null});
   busy = false;
   if(error){
-    addFamError = error.message.includes('CODE_NOT_FOUND') ? "We couldn't find that family code."
-      : error.message.includes('ALREADY_LINKED') ? "You're already linked to that family."
-      : error.message.includes('CANNOT_LINK_SELF') ? "You can't link to your own account."
-      : "Something went wrong. Please try again.";
+    const msg = (error.message || error.details || error.hint || JSON.stringify(error) || "").toString();
+    addFamError = msg.includes('CODE_NOT_FOUND') ? "We couldn't find that family code. Ask them for the 6-digit code from their Senior profile."
+      : msg.includes('ALREADY_LINKED') ? "You're already linked to that family."
+      : msg.includes('CANNOT_LINK_SELF') ? "You can't link to your own account."
+      : msg.includes('NOT_A_CARETAKER') ? "Database needs an update: re-run the full schema.sql in Supabase SQL Editor (Migration 3)."
+      : msg.includes('USER_NOT_FOUND') ? "Account not found. Try logging out and back in."
+      : ("Could not link: " + msg);
+    console.error("link_additional_family", error);
     render(); return;
   }
   addFamSuccess = `Linked to ${(data && data[0] && data[0].senior_name) || 'family'}!`;
@@ -848,6 +852,7 @@ function renderApp(){
         <div class="brand-text"><div class="name">SilverConnect</div><div class="tag">Gateway to the Silver Economy</div></div>
       </div>
       <div class="profile-wrap">
+        <button type="button" class="link-btn" style="width:auto;padding:8px 10px;margin:0;font-size:12px;" onclick="openAddFamily()" title="Add Family Member">➕ Add</button>
         <button class="profile-chip" onclick="toggleProfileMenu()">
           <span class="profile-avatar">${initials}</span>
           <span><span class="profile-name">${session.name}</span><br><span class="profile-role">${roleLabel}</span></span>
