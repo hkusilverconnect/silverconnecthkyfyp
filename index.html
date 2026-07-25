@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SilverConnect · Gateway to the Silver Economy</title>
+<meta name="description" content="Zero-text safety check-ins, mood sharing, and a curated marketplace for the GBA silver economy.">
+<meta name="theme-color" content="#E8748A">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23E8748A'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle'%3E%F0%9F%92%93%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#E8748A; --primary-dark:#c65a70;
+    --secondary:#F4A261; --accent:#6BAF92; --bg:#F5EDE0; --text:#3D2C1E; --muted:#9A7060;
+    --yellow:#F2C14E; --blue:#6C93B8; --gold:#D9A441; --surface:#FFFFFF;
+    --r-sm:8px; --r-md:12px; --r-lg:20px; --r-circle:50%;
+    --sh-sm:0 2px 8px rgba(61,44,30,0.08); --sh-md:0 4px 16px rgba(61,44,30,0.12); --sh-lg:0 8px 32px rgba(61,44,30,0.18);
+    --tap:100px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Nunito',sans-serif; background:linear-gradient(180deg,#EFE3D0 0%, var(--bg) 40%);
+    color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center;
+  }
+  h1,h2,h3,.serif{font-family:'Lora',serif;}
+  button{font-family:inherit;}
+  a{color:inherit;}
+  input{font-family:inherit;}
+
+  /* ================= AUTH SCREENS ================= */
+  .auth-wrap{
+    width:100%; max-width:440px; min-height:100vh; display:flex; flex-direction:column;
+    justify-content:center; padding:32px 24px;
+  }
+  .auth-brand{display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:28px;}
+  .auth-brand .mark{
+    width:64px; height:64px; border-radius:18px; background:linear-gradient(135deg,var(--primary),var(--accent));
+    display:flex; align-items:center; justify-content:center; font-size:32px; box-shadow:var(--sh-md);
+  }
+  .auth-brand .name{font-family:'Lora',serif; font-weight:700; font-size:22px;}
+  .auth-brand .tag{font-size:12.5px; color:var(--muted);}
+  .auth-card{background:var(--surface); border-radius:var(--r-lg); box-shadow:var(--sh-md); padding:28px 24px;}
+  .auth-title{font-size:20px; font-weight:700; margin:0 0 4px;}
+  .auth-sub{font-size:13.5px; color:var(--muted); margin:0 0 20px; line-height:1.5;}
+  .big-btn{
+    width:100%; min-height:var(--tap); border:none; border-radius:var(--r-lg); background:var(--primary);
+    color:#fff; font-weight:800; font-size:17px; cursor:pointer; box-shadow:var(--sh-md); margin-bottom:14px;
+    transition:transform .15s ease; display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  .big-btn:active{transform:scale(.97);}
+  .big-btn.ghost{background:var(--surface); color:var(--text); border:2px solid rgba(61,44,30,0.12); box-shadow:none;}
+  .big-btn.sage{background:var(--accent);}
+  .big-btn:disabled{opacity:.4; cursor:not-allowed;}
+  .field-label{font-size:12.5px; font-weight:800; color:var(--muted); margin:14px 0 6px; display:block;}
+  .text-field{
+    width:100%; min-height:56px; border-radius:var(--r-md); border:2px solid rgba(61,44,30,0.14);
+    padding:0 16px; font-size:16px; color:var(--text); background:var(--bg); outline:none;
+  }
+  .text-field:focus{border-color:var(--primary);}
+  .role-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:6px 0 8px;}
+  .role-card{
+    background:var(--bg); border:2px solid transparent; border-radius:var(--r-lg); padding:20px 12px;
+    text-align:center; cursor:pointer; min-height:var(--tap);
+  }
+  .role-card .e{font-size:34px; display:block; margin-bottom:8px;}
+  .role-card .l{font-weight:800; font-size:14px;}
+  .role-card .s{font-size:11px; color:var(--muted); margin-top:2px;}
+  .role-card.selected{border-color:var(--primary); background:rgba(232,116,138,0.08);}
+
+  .pin-display{display:flex; justify-content:center; gap:14px; margin:18px 0;}
+  .pin-dot{width:20px; height:20px; border-radius:50%; border:2px solid var(--muted); background:transparent;}
+  .pin-dot.filled{background:var(--primary); border-color:var(--primary);}
+  .keypad{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:6px;}
+  .key-btn{
+    min-height:64px; border-radius:var(--r-md); border:none; background:var(--bg); font-size:22px; font-weight:800;
+    color:var(--text); cursor:pointer; box-shadow:var(--sh-sm);
+  }
+  .key-btn:active{transform:scale(.95);}
+  .key-btn.func{background:transparent; box-shadow:none; color:var(--muted); font-size:16px; font-weight:800;}
+
+  .code-display{
+    text-align:center; font-family:'Lora',serif; font-weight:700; font-size:34px; letter-spacing:8px;
+    background:var(--bg); border-radius:var(--r-md); padding:18px 10px; margin:14px 0; color:var(--primary);
+  }
+  .step-dots{display:flex; justify-content:center; gap:6px; margin-bottom:18px;}
+  .step-dot{width:8px; height:8px; border-radius:50%; background:rgba(61,44,30,0.15);}
+  .step-dot.active{background:var(--primary); width:20px; border-radius:4px;}
+  .error-banner{
+    background:rgba(232,116,138,0.12); border:1px solid rgba(232,116,138,0.4); color:var(--primary-dark);
+    font-size:13px; font-weight:700; padding:10px 14px; border-radius:var(--r-md); margin-bottom:14px;
+  }
+  .hint-banner{
+    background:rgba(107,175,146,0.12); border:1px solid rgba(107,175,146,0.35); color:#3d7a5c;
+    font-size:12.5px; padding:10px 14px; border-radius:var(--r-md); margin-top:16px; line-height:1.5;
+  }
+  .link-btn{
+    background:none; border:none; color:var(--primary); font-weight:800; font-size:13.5px; cursor:pointer;
+    text-align:center; width:100%; padding:8px; margin-top:4px;
+  }
+  .back-row{display:flex; align-items:center; gap:8px; margin-bottom:14px;}
+  .back-row button{background:none; border:none; font-size:20px; cursor:pointer; color:var(--muted); padding:4px;}
+
+  /* ================= APP SHELL ================= */
+  .app-shell{width:100%; max-width:1180px; min-height:100vh; background:var(--bg); display:flex; flex-direction:column; position:relative;}
+  .topbar{padding:16px 20px 12px; display:flex; align-items:center; justify-content:space-between; background:var(--bg); max-width:1180px; width:100%; margin:0 auto;}
+  @media (min-width:860px){ .topbar{padding:22px 40px 16px;} }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-mark{width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,var(--primary),var(--accent)); display:flex; align-items:center; justify-content:center; font-size:19px; box-shadow:var(--sh-sm);}
+  .brand-text .name{font-family:'Lora',serif; font-weight:700; font-size:16px; line-height:1.1;}
+  .brand-text .tag{font-size:10px; color:var(--muted); letter-spacing:.02em;}
+
+  .profile-wrap{position:relative;}
+  .profile-chip{display:flex; align-items:center; gap:8px; background:#fff; border:1px solid rgba(61,44,30,0.08); border-radius:999px; padding:6px 14px 6px 6px; cursor:pointer; box-shadow:var(--sh-sm);}
+  .profile-avatar{width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;}
+  .profile-name{font-size:12.5px; font-weight:800; line-height:1.1; text-align:left;}
+  .profile-role{font-size:10px; color:var(--muted);}
+  .profile-menu{position:absolute; right:0; top:52px; background:#fff; border-radius:var(--r-md); box-shadow:var(--sh-lg); width:240px; padding:10px; display:none; z-index:30;}
+  .profile-menu.open{display:block;}
+  .profile-menu .item{display:block; width:100%; text-align:left; background:none; border:none; padding:12px 10px; border-radius:var(--r-sm); font-size:13.5px; font-weight:700; cursor:pointer; color:var(--text);}
+  .profile-menu .item:hover{background:var(--bg);}
+  .profile-menu .item.danger{color:var(--primary-dark);}
+  .profile-menu hr{border:none; border-top:1px solid rgba(61,44,30,0.08); margin:6px 0;}
+  .profile-menu .code-mini{font-family:'Lora',serif; font-weight:700; letter-spacing:4px; font-size:18px; color:var(--primary); text-align:center; padding:8px 0;}
+
+  .mode-strip{text-align:center; font-size:11px; font-weight:700; letter-spacing:.03em; color:#fff; padding:6px 0; background:var(--primary);}
+  .mode-strip.caretaker{background:var(--accent);}
+
+  .tab-content{flex:1; padding:18px 20px 100px; max-width:720px; width:100%; margin:0 auto;}
+  @media (min-width:860px){ .tab-content{padding:12px 40px 60px; max-width:900px;} }
+
+  .bottom-nav{position:fixed; left:0; right:0; bottom:0; display:flex; background:#fff; border-top:1px solid rgba(61,44,30,0.08); padding:8px 8px calc(8px + env(safe-area-inset-bottom)); box-shadow:0 -4px 16px rgba(61,44,30,0.06); z-index:10;}
+  .nav-item{flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none; padding:10px 4px; border-radius:14px; cursor:pointer; min-height:64px; color:var(--muted); font-weight:800;}
+  .nav-item .emo{font-size:24px;} .nav-item .lbl{font-size:11px;}
+  .nav-item.active{color:var(--primary); background:rgba(232,116,138,0.10);}
+
+  .top-nav{display:none;}
+  @media (min-width:860px){
+    .bottom-nav{display:none;}
+    .top-nav{display:flex; gap:8px; max-width:1180px; margin:0 auto; width:100%; padding:0 40px 8px; border-bottom:1px solid rgba(61,44,30,0.08);}
+    .top-nav-item{display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer; padding:10px 18px; border-radius:999px 999px 0 0; color:var(--muted); font-weight:800; font-size:14px;}
+    .top-nav-item .emo{font-size:18px;}
+    .top-nav-item.active{color:var(--primary); background:rgba(232,116,138,0.10);}
+    .tab-content{padding-bottom:60px;}
+  }
+
+  .hero{height:110px; border-radius:var(--r-lg); margin-bottom:18px; position:relative; overflow:hidden; box-shadow:var(--sh-sm); display:flex; align-items:flex-end; padding:14px 16px;}
+  .hero::after{content:""; position:absolute; inset:0; opacity:.16; background-image:radial-gradient(circle at 20% 20%, #fff 0 2px, transparent 3px), radial-gradient(circle at 80% 60%, #fff 0 2px, transparent 3px), radial-gradient(circle at 50% 85%, #fff 0 2px, transparent 3px); background-size:60px 60px;}
+  .hero-label{position:relative; color:#fff; font-weight:800; font-size:13px; text-shadow:0 1px 3px rgba(0,0,0,.15);}
+  .hero.rose-sage{background:linear-gradient(120deg,var(--primary),var(--accent));}
+  .hero.amber-cream{background:linear-gradient(120deg,var(--secondary), #EFD9B0);}
+  .hero.rose-yellow{background:linear-gradient(120deg,var(--primary),var(--yellow));}
+
+  .page-title{font-size:26px; font-weight:700; margin:0 0 4px;}
+  .page-sub{font-size:14px; color:var(--muted); margin:0 0 18px; line-height:1.4;}
+
+  .card{background:var(--surface); border-radius:var(--r-md); padding:16px; box-shadow:var(--sh-sm); margin-bottom:14px;}
+  .card h3{font-size:13px; margin:0 0 6px; font-weight:800;}
+  .card p{font-size:13px; color:var(--muted); margin:0; line-height:1.5;}
+
+  .heart-wrap{display:flex; flex-direction:column; align-items:center; margin:6px 0 22px;}
+  .heart-btn{width:var(--tap); height:var(--tap); border-radius:50%; background:radial-gradient(circle at 35% 30%, #ff98ab, var(--primary) 65%); border:none; color:#fff; font-size:52px; cursor:pointer; box-shadow:0 10px 28px rgba(232,116,138,0.45); display:flex; align-items:center; justify-content:center; animation:pulse 2.4s ease-in-out infinite; transition:transform .15s ease;}
+  .heart-btn:active{transform:scale(.94);}
+  .heart-btn.sent{animation:none; background:radial-gradient(circle at 35% 30%, #86d9b3, var(--accent) 65%); box-shadow:0 10px 28px rgba(107,175,146,0.45);}
+  @keyframes pulse{0%,100%{box-shadow:0 10px 28px rgba(232,116,138,0.45);} 50%{box-shadow:0 10px 44px rgba(232,116,138,0.65);}}
+  @media (prefers-reduced-motion: reduce){ .heart-btn{animation:none;} }
+  .success-msg{margin-top:14px; background:rgba(107,175,146,0.14); color:#3d7a5c; border:1px solid rgba(107,175,146,0.35); font-weight:800; font-size:13px; padding:10px 16px; border-radius:999px; opacity:0; transform:translateY(-4px); transition:all .3s ease; text-align:center;}
+  .success-msg.show{opacity:1; transform:translateY(0);}
+
+  .stat-row{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px;}
+  .stat-card{background:var(--surface); border-radius:var(--r-md); padding:12px 8px; text-align:center; box-shadow:var(--sh-sm);}
+  .stat-card .val{font-family:'Lora',serif; font-size:24px; font-weight:700;}
+  .stat-card .lbl{font-size:11px; color:var(--muted); font-weight:700;}
+  .stat-card.sage .val{color:var(--accent);} .stat-card.amber .val{color:var(--secondary);}
+
+  .alert-banner{display:flex; gap:10px; align-items:flex-start; background:#FDF1E4; border:1px solid rgba(244,162,97,0.4); border-radius:var(--r-md); padding:12px 14px; margin-bottom:16px;}
+  .alert-banner .ic{font-size:20px;} .alert-banner .title{font-weight:800; font-size:13px;} .alert-banner .sub{font-size:12px; color:var(--muted);}
+
+  .fam-card{display:flex; align-items:center; gap:12px; background:var(--surface); border-radius:var(--r-md); padding:12px 14px; margin-bottom:10px; box-shadow:var(--sh-sm);}
+  .fam-emo{width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; background:var(--bg); flex:none;}
+  .fam-emo.checked{background:rgba(107,175,146,0.18);} .fam-emo.alert{background:rgba(244,162,97,0.2);} .fam-emo.pending{background:rgba(154,112,96,0.15);}
+  .fam-info{flex:1; min-width:0;} .fam-name{font-weight:800; font-size:14px;} .fam-relation{font-size:11.5px; color:var(--muted);}
+  .fam-time{font-size:11px; color:var(--muted); font-weight:700; white-space:nowrap;} .fam-trend{font-size:14px; letter-spacing:2px; margin-top:2px;}
+  .insight-card{background:linear-gradient(120deg,#FBF3E7,#F7E6D6); border:1px solid rgba(154,112,96,0.18);}
+
+  .emoji-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;}
+  .emoji-btn{aspect-ratio:1/1; min-height:var(--tap); border-radius:var(--r-lg); border:2px solid transparent; background:var(--surface); box-shadow:var(--sh-sm); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; transition:all .18s ease;}
+  .emoji-btn .e{font-size:36px;} .emoji-btn .l{font-size:12px; font-weight:800; color:var(--text);}
+  .emoji-btn.selected{transform:scale(1.05); border-color:var(--primary); box-shadow:0 6px 18px rgba(232,116,138,.35);}
+  .emoji-btn[data-tone="amber"].selected{border-color:var(--secondary);} .emoji-btn[data-tone="yellow"].selected{border-color:var(--yellow);}
+  .emoji-btn[data-tone="blue"].selected{border-color:var(--blue);} .emoji-btn[data-tone="rose-pink"].selected{border-color:var(--primary);} .emoji-btn[data-tone="gold"].selected{border-color:var(--gold);}
+  .share-btn{width:100%; min-height:var(--tap); border:none; border-radius:var(--r-lg); background:var(--primary); color:#fff; font-weight:800; font-size:16px; cursor:pointer; box-shadow:var(--sh-md); opacity:0; transform:translateY(8px); pointer-events:none; transition:all .25s ease;}
+  .share-btn.ready{opacity:1; transform:translateY(0); pointer-events:auto;}
+  .share-btn:active{transform:scale(.98);}
+
+  .mood-strip{display:flex; justify-content:space-around; background:var(--surface); border-radius:var(--r-md); padding:16px 8px; margin-bottom:16px; box-shadow:var(--sh-sm);}
+  .mood-strip .m{display:flex; flex-direction:column; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--muted);}
+  .mood-strip .m .e{font-size:26px;}
+
+  .product-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:8px;}
+  .product-card,.tour-card,.product-row{background:var(--surface); border-radius:var(--r-md); box-shadow:var(--sh-sm); text-decoration:none; color:var(--text); display:block; position:relative; overflow:hidden; transition:transform .15s ease;}
+  .product-card:active,.tour-card:active,.product-row:active{transform:scale(.97);}
+  .product-card{padding:14px; min-height:150px;}
+  .product-card .badge,.tour-card .badge{position:absolute; top:10px; right:10px; background:var(--accent); color:#fff; font-size:10px; font-weight:800; padding:3px 8px; border-radius:999px;}
+  .product-card .e{font-size:30px;} .product-card .n{font-weight:800; font-size:13.5px; margin-top:8px;}
+  .product-card .d{font-size:11.5px; color:var(--muted); margin-top:3px; line-height:1.35;} .product-card .p{font-weight:800; color:var(--primary); font-size:14px; margin-top:8px;}
+  .section-title{font-family:'Lora',serif; font-weight:700; font-size:17px; margin:20px 0 12px;}
+  .tour-card{padding:14px; margin-bottom:12px; display:flex; gap:12px; align-items:flex-start;}
+  .tour-card .e{font-size:32px; flex:none;} .tour-card .n{font-weight:800; font-size:14.5px;} .tour-card .loc{font-size:11.5px; color:var(--muted); font-weight:700;}
+  .tour-card .d{font-size:12px; color:var(--muted); margin-top:4px; line-height:1.4;}
+  .tour-card .meta{display:flex; justify-content:space-between; align-items:center; margin-top:8px;}
+  .tour-card .p{font-weight:800; color:var(--primary); font-size:13px;} .tour-card .acc{font-size:11px; color:var(--accent); font-weight:700;}
+  .product-row{display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:10px;}
+  .product-row .e{font-size:26px; flex:none;} .product-row .n{font-weight:800; font-size:13.5px;} .product-row .d{font-size:11.5px; color:var(--muted); margin-top:2px;}
+  .product-row .p{font-weight:800; color:var(--primary); font-size:13px; margin-left:auto; white-space:nowrap; padding-left:8px;}
+
+  button:focus-visible, a:focus-visible, input:focus-visible{outline:3px solid var(--primary); outline-offset:2px;}
+  .visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;}
+  .fade-in{animation:fadeIn .3s ease;} @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  @media (min-width:860px){
+    .page-title{font-size:32px;} .hero{height:150px; padding:20px 28px;} .hero-label{font-size:16px;}
+    .emoji-grid{grid-template-columns:repeat(6,1fr); gap:16px;} .product-grid{grid-template-columns:repeat(3,1fr); gap:16px;}
+    .stat-row{max-width:520px;}
+  }
+  @media (min-width:1080px){ .product-grid{grid-template-columns:repeat(4,1fr);} }
+
+  /* ---------- Modal overlay (external-link declaration, add family, PICS) ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(61,44,30,0.45); display:flex; align-items:center; justify-content:center;
+    padding:20px; z-index:100;
+  }
+  .modal-box{background:#fff; border-radius:var(--r-lg); max-width:420px; width:100%; padding:24px; box-shadow:var(--sh-lg); max-height:85vh; overflow-y:auto;}
+  .modal-box h2{font-size:18px; margin:0 0 10px;}
+  .modal-box p{font-size:13.5px; color:var(--muted); line-height:1.55; margin:0 0 10px;}
+  .modal-box .domain-chip{display:inline-block; background:var(--bg); color:var(--text); font-weight:800; padding:4px 10px; border-radius:999px; font-size:12.5px; margin:4px 0 12px;}
+  .modal-actions{display:flex; gap:10px; margin-top:16px;}
+  .modal-actions .big-btn{margin-bottom:0;}
+  .pics-body h3{font-size:14px; margin:16px 0 6px;}
+  .pics-body p, .pics-body li{font-size:12.5px; color:var(--muted); line-height:1.55;}
+  .pics-body{max-height:60vh; overflow-y:auto; padding-right:4px; margin-bottom:14px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+/* ================= BACKEND (Supabase) ================= */
+const NEEDS_SETUP = !window.SUPABASE_URL || window.SUPABASE_URL.includes("YOUR-PROJECT-REF");
+const sb = NEEDS_SETUP ? null : window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+let session = null;
+let busy = false;              // true while an RPC call is in flight
+let caretakerData = null;      // cached array from get_my_families (one row per linked senior)
+let caretakerLoading = false;
+
+/* ---------- External-link confirmation (3rd-party redirect declaration) ---------- */
+let extLinkUrl = null, extLinkName = "", extLinkDomain = "";
+function confirmExternalLink(url, name){
+  extLinkUrl = url; extLinkName = name;
+  try{ extLinkDomain = new URL(url).hostname.replace(/^www\./,''); } catch(e){ extLinkDomain = url; }
+  render();
+}
+function cancelExternalLink(){ extLinkUrl = null; render(); }
+function proceedExternalLink(){ window.open(extLinkUrl, '_blank', 'noopener'); extLinkUrl = null; render(); }
+
+/* ---------- Add Family Member (caretaker linking additional seniors) ---------- */
+let addFamOpen = false, addFamLabel = "", addFamCode = "", addFamError = "", addFamSuccess = "";
+function openAddFamily(){ addFamOpen = true; addFamLabel=""; addFamCode=""; addFamError=""; addFamSuccess=""; profileMenuOpen=false; render(); }
+function closeAddFamily(){ addFamOpen = false; render(); }
+async function submitAddFamily(){
+  if(busy || addFamCode.length!==6) return;
+  busy = true; addFamError=""; render();
+  const {data, error} = await sb.rpc('link_additional_family', {p_phone:session.phone, p_code:addFamCode, p_label: addFamLabel.trim()||null});
+  busy = false;
+  if(error){
+    addFamError = error.message.includes('CODE_NOT_FOUND') ? "We couldn't find that family code."
+      : error.message.includes('ALREADY_LINKED') ? "You're already linked to that family."
+      : error.message.includes('CANNOT_LINK_SELF') ? "You can't link to your own account."
+      : "Something went wrong. Please try again.";
+    render(); return;
+  }
+  addFamSuccess = `Linked to ${data[0].senior_name}'s family!`;
+  caretakerData = null; // force refresh
+  render();
+  loadCaretakerData();
+}
+
+/* ---------- Senior: view linked caretakers ---------- */
+let myCaretakers = null, myCaretakersLoading = false;
+async function loadMyCaretakers(){
+  if(myCaretakersLoading) return;
+  myCaretakersLoading = true;
+  const {data, error} = await sb.rpc('get_my_caretakers', {p_code: session.familyCode});
+  myCaretakersLoading = false;
+  if(!error){ myCaretakers = data || []; }
+  render();
+}
+
+/* ================= APP DATA ================= */
+const moods = [
+  {emoji:"🥣", label:"Hungry", tone:"amber"}, {emoji:"😊", label:"Happy", tone:"yellow"},
+  {emoji:"😴", label:"Tired", tone:"blue"}, {emoji:"🤒", label:"Not Well", tone:"rose-pink"},
+  {emoji:"🌞", label:"Good Day", tone:"gold"}, {emoji:"❤️", label:"Love You", tone:"rose-pink"},
+];
+// Valid, real merchants only: Amazon sells these physical products directly.
+const products = [
+  {e:"🦯", n:"Foldable Walking Cane", d:"Lightweight, adjustable, non-slip rubber tip", p:"HK$299", badge:"Best Seller", url:"https://www.amazon.com/s?k=elderly+walking+cane+foldable", merchant:"Amazon"},
+  {e:"💊", n:"Weekly Pill Organiser", d:"Large compartments, easy-open lids, 7-day", p:"HK$89", url:"https://www.amazon.com/s?k=weekly+pill+organizer+large", merchant:"Amazon"},
+  {e:"🛁", n:"Non-Slip Bath Mat", d:"Suction cup base, machine washable, anti-fall", p:"HK$129", badge:"Safety Pick", url:"https://www.amazon.com/s?k=non+slip+bath+mat+elderly", merchant:"Amazon"},
+  {e:"🍵", n:"Easy-Grip Mug Set", d:"Large handles, insulated, dishwasher safe", p:"HK$159", url:"https://www.amazon.com/s?k=easy+grip+mug+elderly", merchant:"Amazon"},
+  {e:"📱", n:"Large-Button Phone", d:"Big keys, loud speaker, SOS button", p:"HK$399", badge:"Top Rated", url:"https://www.amazon.com/s?k=large+button+phone+elderly", merchant:"Amazon"},
+  {e:"🌡️", n:"Digital Thermometer", d:"One-touch, large display, 10-second reading", p:"HK$69", url:"https://www.amazon.com/s?k=digital+thermometer+easy+read", merchant:"Amazon"},
+];
+// Amazon does not sell "tour packages" — that listing category was an invalid
+// merchant mapping. Swapped for Klook, a real Hong-Kong-based tours & activities
+// platform that actually sells these bookings.
+const tours = [
+  {e:"🌸", n:"Zhuhai Botanical Garden", loc:"Zhuhai", d:"Relaxing day trip with accessible pathways and rest areas", p:"HK$150–200", acc:"♿ Wheelchair accessible", badge:"Popular", url:"https://www.klook.com/search/result/?query=Zhuhai%20day%20tour", merchant:"Klook"},
+  {e:"🌳", n:"Shenzhen Lychee Park", loc:"Shenzhen", d:"Scenic park with cultural heritage and flat terrain", p:"HK$100–150", acc:"🪑 Benches throughout", url:"https://www.klook.com/search/result/?query=Shenzhen%20day%20tour", merchant:"Klook"},
+  {e:"🏛️", n:"Macau Heritage Walk", loc:"Macau", d:"Guided tour of historic sites with assistance available", p:"HK$200–250", acc:"👤 Guided assistance", badge:"Cultural", url:"https://www.klook.com/search/result/?query=Macau%20heritage%20tour", merchant:"Klook"},
+  {e:"🍵", n:"Guangzhou Tea Culture", loc:"Guangzhou", d:"Traditional tea tasting at a ground-floor heritage venue", p:"HK$120–180", acc:"🏠 Ground floor venue", url:"https://www.klook.com/search/result/?query=Guangzhou%20tea%20culture%20tour", merchant:"Klook"},
+];
+const careProducts = [
+  {e:"💊", n:"Smart Pill Dispenser", d:"Automatic alerts, remote monitoring via app", p:"HK$599", badge:"Smart Home", url:"https://www.amazon.com/s?k=smart+pill+dispenser+automatic", merchant:"Amazon"},
+  {e:"📡", n:"GPS Safety Watch", d:"Location tracking, fall detection, SOS button", p:"HK$899", badge:"Safety", url:"https://www.amazon.com/s?k=gps+safety+watch+elderly", merchant:"Amazon"},
+  {e:"🛏️", n:"Bed Rail Safety Guard", d:"Easy install, padded, prevents nighttime falls", p:"HK$349", url:"https://www.amazon.com/s?k=bed+rail+safety+elderly", merchant:"Amazon"},
+];
+
+/* ================= APP STATE ================= */
+let tab = "heartbeat";
+let checkedIn = false;
+let selectedMood = null;
+let moodShared = false;
+let profileMenuOpen = false;
+
+/* ================= AUTH STATE ================= */
+let authView = "welcome";   // welcome | login | register
+let authError = "";
+let loginPhone = "";
+let loginPin = "";
+let regStep = 1;
+let regRole = null;         // senior | caretaker
+let regName = "";
+let regPhone = "";
+let regPin = "";
+let regCode = "";
+let regGeneratedCode = "";
+let regPicsAgreed = false;
+let picsOpen = false;
+function togglePics(open){ picsOpen = open; render(); }
+
+/* ---------- Auth navigation ---------- */
+function goAuth(view){ authView = view; authError = ""; render(); }
+function startRegister(){
+  regStep = 1; regRole = null; regName=""; regPhone=""; regPin=""; regCode=""; regGeneratedCode=""; regPicsAgreed=false;
+  authView = "register"; authError=""; render();
+}
+
+function pressKey(target, digit, maxLen){
+  let val = target==='loginPin'?loginPin : target==='regPin'?regPin : target==='addFamCode'?addFamCode : regCode;
+  if(val.length>=maxLen) return;
+  val += digit;
+  if(target==='loginPin') loginPin=val; else if(target==='regPin') regPin=val; else if(target==='addFamCode') addFamCode=val; else regCode=val;
+  render();
+}
+function backspaceKey(target){
+  if(target==='loginPin') loginPin = loginPin.slice(0,-1);
+  else if(target==='regPin') regPin = regPin.slice(0,-1);
+  else if(target==='addFamCode') addFamCode = addFamCode.slice(0,-1);
+  else regCode = regCode.slice(0,-1);
+  render();
+}
+
+async function submitLogin(){
+  if(busy) return;
+  authError = ""; busy = true; render();
+  const {data, error} = await sb.rpc('login', {p_phone: loginPhone, p_pin: loginPin});
+  busy = false;
+  if(error || !data || data.length===0){
+    authError = "Phone or PIN didn't match. Try again or create an account.";
+    loginPin = "";
+    render();
+    return;
+  }
+  const u = data[0];
+  session = {phone:u.phone, name:u.name, role:u.role, familyCode:u.family_code};
+  authView="welcome"; loginPhone=""; loginPin=""; authError="";
+  render();
+}
+
+let regResult = null;
+
+function pickRole(role){ regRole = role; render(); }
+async function regNext(){
+  authError = "";
+  if(regStep===1){
+    if(!regRole){ authError="Please choose one to continue."; render(); return; }
+    regStep=2; render(); return;
+  }
+  if(regStep===2){
+    if(!regName.trim() || regPhone.trim().length<6){ authError="Please enter your name and a valid phone number."; render(); return; }
+    if(!regPicsAgreed){ authError="Please read and agree to the Personal Information Collection Statement to continue."; render(); return; }
+    regStep=3; render(); return;
+  }
+  if(regStep===3){
+    if(regPin.length!==4){ authError="Please set a 4-digit PIN."; render(); return; }
+    if(regRole==='senior'){
+      if(busy) return;
+      busy = true; render();
+      const {data, error} = await sb.rpc('register_senior', {p_name:regName.trim(), p_phone:regPhone.trim(), p_pin:regPin});
+      busy = false;
+      if(error){
+        authError = error.message.includes('PHONE_TAKEN')
+          ? "That phone number is already registered. Try logging in instead."
+          : "Something went wrong. Please try again.";
+        regStep = 2; render(); return;
+      }
+      regResult = data[0];
+      regGeneratedCode = regResult.family_code;
+      regStep = 4; render(); return;
+    } else {
+      regStep = 4; render(); return;
+    }
+  }
+}
+function continueAfterSeniorRegister(){
+  session = {phone:regResult.phone, name:regResult.name, role:'senior', familyCode:regResult.family_code};
+  authView="welcome"; render();
+}
+function regBack(){
+  authError="";
+  if(regStep>1){ regStep--; render(); } else { authView="welcome"; render(); }
+}
+async function finishRegisterCaretaker(){
+  if(busy) return;
+  authError=""; busy = true; render();
+  const code = regCode.trim();
+  const {data, error} = await sb.rpc('register_caretaker', {p_name:regName.trim(), p_phone:regPhone.trim(), p_pin:regPin, p_code:code});
+  busy = false;
+  if(error){
+    authError = error.message.includes('CODE_NOT_FOUND')
+      ? "We couldn't find that family code. Check with your family member and try again."
+      : error.message.includes('PHONE_TAKEN')
+      ? "That phone number is already registered. Try logging in instead."
+      : "Something went wrong. Please try again.";
+    render(); return;
+  }
+  const u = data[0];
+  session = {phone:u.phone, name:u.name, role:'caretaker', familyCode:u.family_code};
+  authView="welcome"; render();
+}
+function logout(){ session=null; profileMenuOpen=false; tab="heartbeat"; checkedIn=false; selectedMood=null; moodShared=false; caretakerData=null; myCaretakers=null; addFamOpen=false; render(); }
+function toggleProfileMenu(){
+  profileMenuOpen = !profileMenuOpen;
+  if(profileMenuOpen && session && session.role==='senior' && myCaretakers===null){ loadMyCaretakers(); }
+  render();
+}
+
+/* ---------- Keypad renderer ---------- */
+function renderKeypad(target, value, len){
+  const dots = Array.from({length:len}).map((_,i)=>`<div class="pin-dot ${i<value.length?'filled':''}"></div>`).join('');
+  const keys = [1,2,3,4,5,6,7,8,9];
+  let grid = keys.map(k=>`<button type="button" class="key-btn" onclick="pressKey('${target}',${k},${len})">${k}</button>`).join('');
+  grid += `<button type="button" class="key-btn func" onclick="render()"></button>`;
+  grid += `<button type="button" class="key-btn" onclick="pressKey('${target}',0,${len})">0</button>`;
+  grid += `<button type="button" class="key-btn func" onclick="backspaceKey('${target}')" aria-label="Delete">⌫</button>`;
+  return `<div class="pin-display">${dots}</div><div class="keypad">${grid}</div>`;
+}
+
+/* ================= AUTH RENDERERS ================= */
+function renderWelcome(){
+  return `
+    <div class="auth-brand">
+      <div class="mark">💓</div>
+      <div class="name">SilverConnect</div>
+      <div class="tag">Gateway to the Silver Economy</div>
+    </div>
+    <div class="auth-card">
+      <h1 class="auth-title">Welcome</h1>
+      <p class="auth-sub">Sign in to check in with family, or create a new account.</p>
+      <button class="big-btn" onclick="goAuth('login')">Log In</button>
+      <button class="big-btn ghost" onclick="startRegister()">Create an Account</button>
+      <div class="hint-banner">New here? Create a Senior account first — it gives you a Family Code. Then create a Caretaker account and enter that code to link them.</div>
+      <button class="link-btn" onclick="togglePics(true)">📄 Personal Information Collection Statement (PICS)</button>
+    </div>
+  `;
+}
+function renderLogin(){
+  return `
+    <div class="back-row"><button onclick="goAuth('welcome')" aria-label="Back">←</button><h1 class="auth-title" style="margin:0;">Log In</h1></div>
+    <div class="auth-card">
+      ${authError?`<div class="error-banner">${authError}</div>`:''}
+      <label class="field-label" for="loginPhoneInput">Phone Number</label>
+      <input id="loginPhoneInput" class="text-field" type="tel" inputmode="numeric" placeholder="e.g. 98765432" value="${loginPhone}" oninput="loginPhone=this.value.replace(/\\D/g,''); this.value=loginPhone;">
+      <label class="field-label">4-Digit PIN</label>
+      ${renderKeypad('loginPin', loginPin, 4)}
+      <button class="big-btn" style="margin-top:10px;" ${loginPin.length!==4||busy?'disabled':''} onclick="submitLogin()">${busy?'Logging in…':'Log In'}</button>
+      <button class="link-btn" onclick="alert('Please contact your family for help resetting your PIN.')">Forgot PIN?</button>
+      <button class="link-btn" onclick="togglePics(true)">📄 Personal Information Collection Statement (PICS)</button>
+    </div>
+  `;
+}
+function renderRegister(){
+  const steps = regRole==='senior' ? 4 : 4;
+  const dots = Array.from({length:4}).map((_,i)=>`<div class="step-dot ${i+1<=regStep?'active':''}"></div>`).join('');
+  let body = '';
+  if(regStep===1){
+    body = `
+      <h1 class="auth-title">Create an Account</h1>
+      <p class="auth-sub">Who is this account for?</p>
+      <div class="role-grid">
+        <div class="role-card ${regRole==='senior'?'selected':''}" onclick="pickRole('senior')">
+          <span class="e">👴</span><div class="l">Senior</div><div class="s">Ages 76–90</div>
+        </div>
+        <div class="role-card ${regRole==='caretaker'?'selected':''}" onclick="pickRole('caretaker')">
+          <span class="e">👨‍👩‍👧</span><div class="l">Caretaker</div><div class="s">Ages 65–75</div>
+        </div>
+      </div>`;
+  } else if(regStep===2){
+    body = `
+      <h1 class="auth-title">Your Details</h1>
+      <p class="auth-sub">Just your name and phone number — nothing else.</p>
+      <label class="field-label" for="regNameInput">Name</label>
+      <input id="regNameInput" class="text-field" type="text" placeholder="e.g. Wong Tai Man" value="${regName}" oninput="regName=this.value;">
+      <label class="field-label" for="regPhoneInput">Phone Number</label>
+      <input id="regPhoneInput" class="text-field" type="tel" inputmode="numeric" placeholder="e.g. 91234567" value="${regPhone}" oninput="regPhone=this.value.replace(/\\D/g,''); this.value=regPhone;">
+      <label style="display:flex; align-items:flex-start; gap:10px; margin-top:16px; font-size:12.5px; color:var(--muted); line-height:1.5; cursor:pointer;">
+        <input type="checkbox" style="width:20px; height:20px; margin-top:2px; flex:none;" ${regPicsAgreed?'checked':''} onchange="regPicsAgreed=this.checked; render();">
+        <span>I have read and agree to the <a href="#" onclick="event.preventDefault(); event.stopPropagation(); togglePics(true);" style="color:var(--primary); font-weight:800;">Personal Information Collection Statement</a> (required under Hong Kong's Personal Data (Privacy) Ordinance).</span>
+      </label>`;
+  } else if(regStep===3){
+    body = `
+      <h1 class="auth-title">Set a PIN</h1>
+      <p class="auth-sub">Choose a simple 4-digit PIN you'll remember.</p>
+      ${renderKeypad('regPin', regPin, 4)}`;
+  } else if(regStep===4 && regRole==='senior'){
+    body = `
+      <h1 class="auth-title">You're All Set 🎉</h1>
+      <p class="auth-sub">Share this Family Code with your caretaker so their account links to yours.</p>
+      <div class="code-display">${regGeneratedCode.slice(0,3)} ${regGeneratedCode.slice(3)}</div>
+      <button class="big-btn sage" onclick="continueAfterSeniorRegister()">Continue to App</button>`;
+  } else if(regStep===4 && regRole==='caretaker'){
+    body = `
+      <h1 class="auth-title">Link to Your Family</h1>
+      <p class="auth-sub">Enter the 6-digit Family Code your senior family member shared with you.</p>
+      ${authError?`<div class="error-banner">${authError}</div>`:''}
+      ${renderKeypad('regCode', regCode, 6)}
+      <button class="big-btn" style="margin-top:10px;" ${regCode.length!==6||busy?'disabled':''} onclick="finishRegisterCaretaker()">${busy?'Linking…':'Link Account'}</button>`;
+  }
+  const nextLabel = (regStep===3 && regRole==='senior') ? (busy?'Creating account…':'Continue') : 'Continue';
+  return `
+    <div class="back-row"><button onclick="regBack()" aria-label="Back">←</button><div class="step-dots" style="margin:0; flex:1;">${dots}</div></div>
+    <div class="auth-card">
+      ${authError && regStep!==4 ? `<div class="error-banner">${authError}</div>` : ''}
+      ${body}
+      ${regStep<4?`<button class="big-btn" style="margin-top:14px;" ${busy||(regStep===2&&!regPicsAgreed)?'disabled':''} onclick="regNext()">${nextLabel}</button>`:''}
+    </div>
+  `;
+}
+
+/* ================= APP RENDERERS (unchanged content, role-driven mode) ================= */
+function heartbeatSenior(){
+  return `
+    <div class="hero rose-sage"><span class="hero-label">Daily Safety Check-In</span></div>
+    <h1 class="page-title">I'm Okay</h1>
+    <p class="page-sub">Let your family know you're safe with one tap</p>
+    <div class="heart-wrap">
+      <button class="heart-btn ${checkedIn?'sent':''}" onclick="sendCheckIn()" aria-label="Tap to let your family know you are okay">${checkedIn?'✓':'💓'}</button>
+      <div class="success-msg ${checkedIn?'show':''}" role="status">Sent to 3 family members</div>
+    </div>
+    <div class="card"><h3>For You</h3><p>One simple tap. No typing needed. Your family will know you're safe.</p></div>
+    <div class="card"><h3>For Family</h3><p>Daily peace of mind. Gentle reminder if you miss a check-in.</p></div>
+  `;
+}
+function heartbeatCaretaker(){
+  if(!caretakerData){
+    return `<h1 class="page-title">Family Dashboard</h1><p class="page-sub">Loading your family's status…</p>`;
+  }
+  if(caretakerData.length===0){
+    return `
+      <h1 class="page-title">Family Dashboard</h1>
+      <p class="page-sub">You're not linked to anyone yet</p>
+      <div class="card"><h3>Get Started</h3><p>Ask your family member to open their account's Family Code, then tap your profile → <strong>Add Family Member</strong> and enter it.</p></div>
+      <button class="big-btn" onclick="openAddFamily()">➕ Add Family Member</button>
+    `;
+  }
+  const cards = caretakerData.map(d=>{
+    const isIn = !!d.last_checkin;
+    const t = isIn ? new Date(d.last_checkin).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'}) : null;
+    return `
+    <div class="fam-card">
+      <div class="fam-emo ${isIn?'checked':'pending'}">${isIn?'😊':'⏰'}</div>
+      <div class="fam-info"><div class="fam-name">${d.label || d.senior_name}</div><div class="fam-relation">${isIn?`Checked in ${t}`:'No check-in yet today'}</div></div>
+    </div>`;
+  }).join('');
+  const anyAlert = caretakerData.some(d=>!d.last_checkin);
+  return `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div><h1 class="page-title" style="margin-bottom:0;">Family Dashboard</h1><p class="page-sub">Real-time status for ${caretakerData.length} linked ${caretakerData.length===1?'member':'members'}</p></div>
+      <button class="link-btn" style="width:auto; padding:6px 10px; margin-top:2px;" onclick="reloadCaretakerData()">⟳ Refresh</button>
+    </div>
+    ${anyAlert ? `<div class="alert-banner"><span class="ic">⚠️</span><div><div class="title">Someone hasn't checked in yet</div><div class="sub">See below and consider giving them a call</div></div></div>` : ''}
+    ${cards}
+    <div class="card insight-card"><h3>📊 Live Data</h3><p>Pulled straight from your Supabase database — no mock numbers.</p></div>
+  `;
+}
+function statusSenior(){
+  const grid = moods.map((m,i)=>`
+    <button class="emoji-btn ${selectedMood===i?'selected':''}" data-tone="${m.tone}" onclick="selectMood(${i})" aria-pressed="${selectedMood===i}" aria-label="${m.label}">
+      <span class="e">${m.emoji}</span><span class="l">${m.label}</span></button>`).join('');
+  return `
+    <h1 class="page-title">How Are You Feeling?</h1>
+    <p class="page-sub">Share your mood with your family</p>
+    <div class="emoji-grid">${grid}</div>
+    <button class="share-btn ${selectedMood!==null?'ready':''}" onclick="shareMood()">Share with Family</button>
+    <div class="success-msg ${moodShared?'show':''}" style="margin-top:14px;" role="status">Shared with your family!</div>
+  `;
+}
+function statusCaretaker(){
+  if(!caretakerData){
+    return `<h1 class="page-title">Family Mood Board</h1><p class="page-sub">Loading…</p>`;
+  }
+  if(caretakerData.length===0){
+    return `
+      <h1 class="page-title">Family Mood Board</h1>
+      <p class="page-sub">You're not linked to anyone yet</p>
+      <div class="card"><h3>Get Started</h3><p>Ask your family member for their Family Code, then tap your profile → <strong>Add Family Member</strong>.</p></div>
+      <button class="big-btn" onclick="openAddFamily()">➕ Add Family Member</button>
+    `;
+  }
+  const cards = caretakerData.map(d=>{
+    const hasMood = !!d.last_mood_emoji;
+    const mt = hasMood ? new Date(d.last_mood_time).toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric'}) : null;
+    return `
+    <div class="card">
+      <div style="display:flex; align-items:center; gap:12px;">
+        ${hasMood ? `<span style="font-size:30px;">${d.last_mood_emoji}</span>` : `<span style="font-size:30px;">❔</span>`}
+        <div>
+          <div style="font-weight:800; font-size:13.5px;">${d.label || d.senior_name}${hasMood?` · ${d.last_mood_label}`:''}</div>
+          <div style="font-size:12px; color:var(--muted);">${hasMood?mt:'No mood shared yet'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  return `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <div><h1 class="page-title" style="margin-bottom:0;">Family Mood Board</h1><p class="page-sub">Latest shared moods</p></div>
+      <button class="link-btn" style="width:auto; padding:6px 10px; margin-top:2px;" onclick="reloadCaretakerData()">⟳ Refresh</button>
+    </div>
+    ${cards}
+    <div class="card insight-card"><h3>🔍 Live Data</h3><p>Each card reflects the most recent row in the <code>moods</code> table for that family member.</p></div>
+  `;
+}
+function marketplaceSenior(){
+  const grid = products.map(p=>`
+    <a class="product-card" href="${p.url}" onclick="event.preventDefault(); confirmExternalLink('${p.url}', '${p.n.replace(/'/g,"\\'")}');">
+      ${p.badge?`<span class="badge">${p.badge}</span>`:''}
+      <div class="e">${p.e}</div><div class="n">${p.n}</div><div class="d">${p.d}</div><div class="p">${p.p}</div>
+      <div style="font-size:10px; color:var(--muted); margin-top:6px;">via ${p.merchant} ↗</div></a>`).join('');
+  return `
+    <div class="hero amber-cream"><span class="hero-label" style="color:#3D2C1E;">Daily Essentials</span></div>
+    <h1 class="page-title">Silver Shop 🛍️</h1>
+    <p class="page-sub">Daily essentials curated for you · via trusted merchants</p>
+    <div class="product-grid">${grid}</div>
+  `;
+}
+function marketplaceCaretaker(){
+  const tourCards = tours.map(t=>`
+    <a class="tour-card" href="${t.url}" onclick="event.preventDefault(); confirmExternalLink('${t.url}', '${t.n.replace(/'/g,"\\'")}');">
+      ${t.badge?`<span class="badge">${t.badge}</span>`:''}
+      <span class="e">${t.e}</span>
+      <div style="flex:1;"><div class="n">${t.n}</div><div class="loc">${t.loc}</div><div class="d">${t.d}</div>
+      <div class="meta"><span class="p">${t.p}</span><span class="acc">${t.acc}</span></div>
+      <div style="font-size:10px; color:var(--muted); margin-top:4px;">via ${t.merchant} ↗</div></div></a>`).join('');
+  const careRows = careProducts.map(p=>`
+    <a class="product-row" href="${p.url}" onclick="event.preventDefault(); confirmExternalLink('${p.url}', '${p.n.replace(/'/g,"\\'")}');">
+      <span class="e">${p.e}</span>
+      <div><div class="n">${p.n} ${p.badge?`<span style="font-size:9.5px; background:var(--accent); color:#fff; padding:2px 6px; border-radius:999px; margin-left:4px;">${p.badge}</span>`:''}</div><div class="d">${p.d}</div><div style="font-size:10px; color:var(--muted); margin-top:2px;">via ${p.merchant} ↗</div></div>
+      <span class="p">${p.p}</span></a>`).join('');
+  return `
+    <div class="hero rose-yellow"><span class="hero-label">Explore Together</span></div>
+    <h1 class="page-title">GBA Silver Hub 🗺️</h1>
+    <p class="page-sub">Accessible trips across the Greater Bay Area</p>
+    ${tourCards}
+    <div class="section-title">Shop for Parents 🎁</div>
+    ${careRows}
+  `;
+}
+
+async function sendCheckIn(){
+  if(busy || checkedIn) return;
+  busy = true; render();
+  const {error} = await sb.rpc('send_checkin', {p_phone: session.phone});
+  busy = false;
+  if(!error){ checkedIn = true; }
+  render();
+}
+function selectMood(i){ selectedMood=i; moodShared=false; render(); }
+async function shareMood(){
+  if(selectedMood===null || busy) return;
+  const m = moods[selectedMood];
+  busy = true; render();
+  const {error} = await sb.rpc('share_mood', {p_phone: session.phone, p_emoji:m.emoji, p_label:m.label});
+  busy = false;
+  if(!error){ moodShared = true; }
+  render();
+}
+async function loadCaretakerData(){
+  if(caretakerLoading) return;
+  caretakerLoading = true;
+  const {data, error} = await sb.rpc('get_my_families', {p_phone: session.phone});
+  caretakerLoading = false;
+  if(!error){ caretakerData = data || []; }
+  render();
+}
+function reloadCaretakerData(){ caretakerData = null; render(); loadCaretakerData(); }
+function setTab(t){ tab=t; profileMenuOpen=false; render(); }
+
+function renderApp(){
+  const mode = session.role;
+  const initials = session.name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const roleLabel = mode==='senior' ? 'Senior' : 'Caretaker';
+  if(mode==='caretaker' && (tab==='heartbeat'||tab==='status') && !caretakerData && !caretakerLoading){
+    loadCaretakerData();
+  }
+  const map = {
+    'heartbeat-senior':heartbeatSenior,'heartbeat-caretaker':heartbeatCaretaker,
+    'status-senior':statusSenior,'status-caretaker':statusCaretaker,
+    'marketplace-senior':marketplaceSenior,'marketplace-caretaker':marketplaceCaretaker,
+  };
+  const content = map[`${tab}-${mode}`]();
+  return `
+  <div class="app-shell">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">💓</div>
+        <div class="brand-text"><div class="name">SilverConnect</div><div class="tag">Gateway to the Silver Economy</div></div>
+      </div>
+      <div class="profile-wrap">
+        <button class="profile-chip" onclick="toggleProfileMenu()">
+          <span class="profile-avatar">${initials}</span>
+          <span><span class="profile-name">${session.name}</span><br><span class="profile-role">${roleLabel}</span></span>
+        </button>
+        <div class="profile-menu ${profileMenuOpen?'open':''}">
+          ${mode==='senior' ? `
+            <div style="font-size:11px; color:var(--muted); font-weight:800; padding:6px 10px;">FAMILY CODE</div>
+            <div class="code-mini">${session.familyCode.slice(0,3)} ${session.familyCode.slice(3)}</div>
+            <div style="font-size:11px; color:var(--muted); font-weight:800; padding:6px 10px 2px;">LINKED CARETAKERS</div>
+            <div style="padding:0 10px 8px; font-size:12.5px;">
+              ${myCaretakers===null ? 'Loading…' : myCaretakers.length===0 ? 'None yet — share your code above.' : myCaretakers.map(c=>`<div style="padding:3px 0;">👤 ${c.name}</div>`).join('')}
+            </div>
+          ` : `
+            <button class="item" onclick="openAddFamily()">➕ Add Family Member</button>
+          `}
+          <hr>
+          <button class="item danger" onclick="logout()">Log Out</button>
+        </div>
+      </div>
+    </div>
+    <div class="mode-strip ${mode==='caretaker'?'caretaker':''}">${roleLabel} Mode</div>
+    <nav class="top-nav" aria-label="Main navigation (desktop)">
+      <button class="top-nav-item ${tab==='heartbeat'?'active':''}" onclick="setTab('heartbeat')"><span class="emo">💓</span>Heartbeat</button>
+      <button class="top-nav-item ${tab==='status'?'active':''}" onclick="setTab('status')"><span class="emo">😊</span>Status</button>
+      <button class="top-nav-item ${tab==='marketplace'?'active':''}" onclick="setTab('marketplace')"><span class="emo">🛍️</span>Shop</button>
+    </nav>
+    <div class="tab-content fade-in">${content}</div>
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button class="nav-item ${tab==='heartbeat'?'active':''}" onclick="setTab('heartbeat')"><span class="emo">💓</span><span class="lbl">Heartbeat</span></button>
+      <button class="nav-item ${tab==='status'?'active':''}" onclick="setTab('status')"><span class="emo">😊</span><span class="lbl">Status</span></button>
+      <button class="nav-item ${tab==='marketplace'?'active':''}" onclick="setTab('marketplace')"><span class="emo">🛍️</span><span class="lbl">Shop</span></button>
+    </nav>
+  </div>`;
+}
+
+function renderSetupNeeded(){
+  return `
+    <div class="auth-brand"><div class="mark">⚙️</div><div class="name">SilverConnect</div><div class="tag">Backend not connected yet</div></div>
+    <div class="auth-card">
+      <h1 class="auth-title">One step left</h1>
+      <p class="auth-sub">This app needs to be pointed at your Supabase project. Open <strong>config.js</strong> in this folder and paste in your Project URL and anon public key (Supabase → Project Settings → API), then reload this page.</p>
+      <div class="hint-banner">Don't have a Supabase project yet? Follow the DEPLOY.md guide in this folder — it walks through creating one, running schema.sql, and filling in config.js, in about 5 minutes.</div>
+    </div>
+  `;
+}
+
+/* ---------- External-link declaration modal (HK-bank-style 3rd-party redirect notice) ---------- */
+function renderExternalLinkModal(){
+  if(!extLinkUrl) return '';
+  return `
+  <div class="modal-overlay" onclick="if(event.target===this) cancelExternalLink();">
+    <div class="modal-box">
+      <h2>⚠️ You're Leaving SilverConnect</h2>
+      <p>You're about to visit <strong>${extLinkName}</strong> on:</p>
+      <div class="domain-chip">🔗 ${extLinkDomain}</div>
+      <p>This is an independent third-party website. SilverConnect does not operate this site and has no control over, and accepts no liability for, its content, availability, pricing, or any transaction you make there. Any purchase is solely a matter between you and that merchant.</p>
+      <p style="font-size:11.5px;">This notice follows the same practice used by Hong Kong banks when redirecting customers to third-party websites.</p>
+      <div class="modal-actions">
+        <button class="big-btn ghost" style="margin:0;" onclick="cancelExternalLink()">Cancel</button>
+        <button class="big-btn" style="margin:0;" onclick="proceedExternalLink()">Continue</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Add Family Member modal (caretaker linking additional seniors) ---------- */
+function renderAddFamilyModal(){
+  if(!addFamOpen) return '';
+  return `
+  <div class="modal-overlay" onclick="if(event.target===this) closeAddFamily();">
+    <div class="modal-box">
+      <h2>➕ Add Family Member</h2>
+      <p>Enter their name and the 6-digit Family Code from their Senior account.</p>
+      ${addFamError?`<div class="error-banner">${addFamError}</div>`:''}
+      ${addFamSuccess?`<div class="success-msg show" style="display:block; margin-bottom:14px;">${addFamSuccess}</div>`:''}
+      <label class="field-label" for="addFamNameInput">Name (e.g. "Dad")</label>
+      <input id="addFamNameInput" class="text-field" type="text" placeholder="e.g. Dad" value="${addFamLabel}" oninput="addFamLabel=this.value;">
+      <label class="field-label">Family Code</label>
+      ${renderKeypad('addFamCode', addFamCode, 6)}
+      <div class="modal-actions">
+        <button class="big-btn ghost" style="margin:0;" onclick="closeAddFamily()">${addFamSuccess?'Close':'Cancel'}</button>
+        ${addFamSuccess ? '' : `<button class="big-btn" style="margin:0;" ${addFamCode.length!==6||busy?'disabled':''} onclick="submitAddFamily()">${busy?'Linking…':'Link'}</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Personal Information Collection Statement (PDPO / DPP) modal ---------- */
+function renderPicsModal(){
+  if(!picsOpen) return '';
+  return `
+  <div class="modal-overlay" onclick="if(event.target===this) togglePics(false);">
+    <div class="modal-box">
+      <h2>📄 Personal Information Collection Statement</h2>
+      <div class="pics-body">
+        <p>SilverConnect ("we", "us") collects and handles personal data in accordance with the <strong>Personal Data (Privacy) Ordinance (Cap. 486)</strong> of Hong Kong ("the Ordinance") and its six Data Protection Principles ("DPPs"). This statement explains what we collect and why.</p>
+
+        <h3>DPP1 — Purpose &amp; Manner of Collection</h3>
+        <p>We collect your name and phone number to create your account, verify your identity when you log in, generate and manage the Family Code used to link Senior and Caretaker accounts, and to operate the daily check-in and mood-sharing features. Data is collected directly from you through this app, fairly and no more than is necessary for these purposes.</p>
+
+        <h3>DPP2 — Accuracy &amp; Retention</h3>
+        <p>Please keep your name and phone number accurate and up to date. We retain account data for as long as your account remains active, and check-in/mood records for as long as needed to provide the family-status features, after which data may be deleted upon account closure or request.</p>
+
+        <h3>DPP3 — Use of Personal Data</h3>
+        <p>Your data is used only for the purposes stated above. Your check-in and mood updates are shared only with family members linked to your account via a valid Family Code — never with unrelated third parties, and never for advertising. Product and tour listings link out to independent merchants (e.g. Amazon, Klook); we do not share your personal data with them by browsing our marketplace.</p>
+
+        <h3>DPP4 — Security of Personal Data</h3>
+        <p>PINs are never stored in plain text — they are hashed using industry-standard cryptographic hashing before being saved. Data access is restricted at the database level (Row Level Security), and only the minimum functions needed can read or write your data.</p>
+
+        <h3>DPP5 — Openness &amp; Transparency</h3>
+        <p>This statement is available at any time from the Login and Registration screens. We aim to be clear and specific about what is collected and why, in plain language.</p>
+
+        <h3>DPP6 — Access &amp; Correction</h3>
+        <p>You have the right to request access to, and correction of, your personal data held by us, in accordance with the Ordinance. To make such a request, contact the account holder/operator of this SilverConnect deployment directly.</p>
+
+        <h3>Important note</h3>
+        <p><strong>This statement is a template provided for demonstration purposes and does not constitute legal advice.</strong> Before real-world or commercial use, it should be reviewed and customised by a qualified Hong Kong lawyer or data-privacy professional to reflect your actual organisation, data flows, and retention practices, and to insert your organisation's real contact details for data access/correction requests.</p>
+      </div>
+      <button class="big-btn" onclick="togglePics(false)">Close</button>
+    </div>
+  </div>`;
+}
+
+/* ================= MASTER RENDER ================= */
+function render(){
+  const root = document.getElementById('root');
+  if(NEEDS_SETUP){
+    root.innerHTML = `<div class="auth-wrap fade-in">${renderSetupNeeded()}</div>`;
+    return;
+  }
+  let inner;
+  if(!session){
+    let authInner = authView==='login' ? renderLogin() : authView==='register' ? renderRegister() : renderWelcome();
+    inner = `<div class="auth-wrap fade-in">${authInner}</div>`;
+  } else {
+    inner = renderApp();
+  }
+  root.innerHTML = inner + renderExternalLinkModal() + renderAddFamilyModal() + renderPicsModal();
+}
+render();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+</script>
+</body>
+</html>
