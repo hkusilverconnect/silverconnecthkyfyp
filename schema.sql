@@ -211,3 +211,74 @@ $$;
 grant execute on function link_additional_family(text,text,text) to anon;
 grant execute on function get_my_families(text)                  to anon;
 grant execute on function get_my_caretakers(text)                to anon;
+
+-- ============================================================
+-- MIGRATION 3 — any role can link family; 7-day history
+-- Safe to re-run.
+-- ============================================================
+
+-- Allow BOTH senior and caretaker to link additional family codes
+create or replace function link_additional_family(p_phone text, p_code text, p_label text default null)
+returns table(family_code text, senior_name text)
+language plpgsql security definer as $$
+declare
+  v_senior_phone text;
+  v_senior_name text;
+begin
+  if not exists (select 1 from users u where u.phone = p_phone) then
+    raise exception 'USER_NOT_FOUND';
+  end if;
+  select f.senior_phone into v_senior_phone from families f where f.code = p_code;
+  if v_senior_phone is null then
+    raise exception 'CODE_NOT_FOUND';
+  end if;
+  if v_senior_phone = p_phone then
+    raise exception 'CANNOT_LINK_SELF';
+  end if;
+  if exists (select 1 from caretaker_links cl where cl.caretaker_phone = p_phone and cl.family_code = p_code) then
+    raise exception 'ALREADY_LINKED';
+  end if;
+  insert into caretaker_links(caretaker_phone, family_code, label) values (p_phone, p_code, p_label);
+  select u.name into v_senior_name from users u where u.phone = v_senior_phone;
+  return query select p_code, v_senior_name;
+end;
+$$;
+
+-- Last 7 calendar days of check-ins + moods for one person
+create or replace function get_week_history(p_phone text)
+returns table(
+  day date,
+  checked_in boolean,
+  mood_emoji text,
+  mood_label text
+)
+language sql security definer as $$
+  with days as (
+    select (current_date - g.i)::date as day
+    from generate_series(0, 6) as g(i)
+  )
+  select
+    d.day,
+    exists (
+      select 1 from checkins c
+      where c.senior_phone = p_phone
+        and (c.created_at at time zone 'UTC')::date = d.day
+    ) as checked_in,
+    (
+      select m.emoji from moods m
+      where m.phone = p_phone
+        and (m.created_at at time zone 'UTC')::date = d.day
+      order by m.created_at desc limit 1
+    ) as mood_emoji,
+    (
+      select m.label from moods m
+      where m.phone = p_phone
+        and (m.created_at at time zone 'UTC')::date = d.day
+      order by m.created_at desc limit 1
+    ) as mood_label
+  from days d
+  order by d.day asc;
+$$;
+
+grant execute on function link_additional_family(text,text,text) to anon;
+grant execute on function get_week_history(text) to anon;
