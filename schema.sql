@@ -67,6 +67,9 @@ begin
     raise exception 'PHONE_TAKEN';
   end if;
   v_code := lpad(floor(random()*900000+100000)::text, 6, '0');
+  while exists (select 1 from families f where f.code = v_code) loop
+    v_code := lpad(floor(random()*900000+100000)::text, 6, '0');
+  end loop;
   insert into users(phone, name, pin_hash, role, family_code)
   values (p_phone, p_name, crypt(p_pin, gen_salt('bf')), 'senior', v_code);
   insert into families(code, senior_phone) values (v_code, p_phone);
@@ -74,20 +77,26 @@ begin
 end;
 $$;
 
-create or replace function register_caretaker(p_name text, p_phone text, p_pin text, p_code text)
+-- Both senior and caretaker generate their own unique 6-digit Family Code
+-- so either role can share a code and the other can link via "Add Family Member".
+create or replace function register_caretaker(p_name text, p_phone text, p_pin text)
 returns table(phone text, name text, role text, family_code text)
 language plpgsql security definer as $$
+declare
+  v_code text;
 begin
   if exists (select 1 from users u where u.phone = p_phone) then
     raise exception 'PHONE_TAKEN';
   end if;
-  if not exists (select 1 from families f where f.code = p_code) then
-    raise exception 'CODE_NOT_FOUND';
-  end if;
+  v_code := lpad(floor(random()*900000+100000)::text, 6, '0');
+  -- ensure uniqueness (very rare collision)
+  while exists (select 1 from families f where f.code = v_code) loop
+    v_code := lpad(floor(random()*900000+100000)::text, 6, '0');
+  end loop;
   insert into users(phone, name, pin_hash, role, family_code)
-  values (p_phone, p_name, crypt(p_pin, gen_salt('bf')), 'caretaker', p_code);
-  insert into caretaker_links(caretaker_phone, family_code) values (p_phone, p_code);
-  return query select p_phone, p_name, 'caretaker'::text, p_code;
+  values (p_phone, p_name, crypt(p_pin, gen_salt('bf')), 'caretaker', v_code);
+  insert into families(code, senior_phone) values (v_code, p_phone);
+  return query select p_phone, p_name, 'caretaker'::text, v_code;
 end;
 $$;
 
@@ -132,7 +141,7 @@ $$;
 
 -- ---------- Let the app's public (anon) key call these ----------
 grant execute on function register_senior(text,text,text)               to anon;
-grant execute on function register_caretaker(text,text,text,text)       to anon;
+grant execute on function register_caretaker(text,text,text)            to anon;
 grant execute on function login(text,text)                              to anon;
 grant execute on function send_checkin(text)                            to anon;
 grant execute on function share_mood(text,text,text)                    to anon;
