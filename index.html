@@ -339,7 +339,6 @@ const I18N = {
     leaving: "⚠️ You're Leaving SilverConnect",
     aboutToVisit: "You're about to visit", on: 'on:',
     thirdParty: 'SilverConnect may provide hyperlinks to websites of third parties ("Third-party Websites"). These Third-party Websites are not affiliated with or related to SilverConnect. Such hyperlinks are for your information only. SilverConnect accepts no liability, directly or indirectly, for your access to or use of (or inability to access or use) these Third-party Websites. Providing a hyperlink does not represent any recommendation, endorsement, approval, guarantee or introduction of any third party or any product or service, nor any co-operation with such third party, unless we expressly state otherwise in writing. SilverConnect is not a party to any contract you may enter into with a third party. You use these hyperlinks at your own risk and cost. We are not responsible for any loss, damage or consequence arising from your use of any such hyperlink, nor for the accuracy or truthfulness of Third-party Website contents.',
-    bankPractice: '',
     continue: 'Continue',
     picsTitle: '📄 Personal Information Collection Statement',
     backendTitle: 'One step left', backendSub: 'This app needs to be pointed at your Supabase project. Open config.js in this folder and paste in your Project URL and anon public key (Supabase → Project Settings → API), then reload this page.',
@@ -417,7 +416,6 @@ const I18N = {
     leaving: '⚠️ 您即將離開銀髮通',
     aboutToVisit: '您即將前往', on: '於：',
     thirdParty: '銀髮通可能提供通往第三方網站（「第三方網站」）的超連結。該等第三方網站與銀髮通並無附屬或相關關係。有關超連結僅供參考。銀髮通對您能否或如何存取及／或使用該等第三方網站，概不直接或間接承擔任何責任。提供超連結並不代表對任何第三方或其產品或服務作出推薦、認可、批准、保證或介紹，亦不代表與該第三方有任何合作，除非我們以書面另行明確說明。銀髮通並非您與第三方可能訂立的任何合約的一方。您使用上述超連結須自行承擔風險及費用。我們不會就因使用任何該等超連結而直接或間接引致的任何損失、損害或後果負責，亦不就第三方網站內容的準確性或真實性承擔責任。',
-    bankPractice: '',
     continue: '繼續',
     picsTitle: '📄 個人資料收集聲明',
     backendTitle: '還差一步', backendSub: '此應用程式需連接您的 Supabase 專案。請開啟本資料夾中的 config.js，貼上 Project URL 及 anon public key（Supabase → Project Settings → API），然後重新載入頁面。',
@@ -1096,7 +1094,7 @@ function renderSetupNeeded(){
   `;
 }
 
-/* ---------- External-link declaration modal (HK-bank-style 3rd-party redirect notice) ---------- */
+/* ---------- External-link declaration modal (3rd-party redirect notice) ---------- */
 function renderExternalLinkModal(){
   if(!extLinkUrl) return '';
   return `
@@ -1106,7 +1104,6 @@ function renderExternalLinkModal(){
       <p>${t('aboutToVisit')} <strong>${extLinkName}</strong> ${t('on')}</p>
       <div class="domain-chip">🔗 ${extLinkDomain}</div>
       <p>${t('thirdParty')}</p>
-      <p style="font-size:11.5px;">${t('bankPractice')}</p>
       <div class="modal-actions">
         <button class="big-btn ghost" style="margin:0;" onclick="cancelExternalLink()">${t('cancel')}</button>
         <button class="big-btn" style="margin:0;" onclick="proceedExternalLink()">${t('continue')}</button>
