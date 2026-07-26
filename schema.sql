@@ -291,3 +291,53 @@ $$;
 
 grant execute on function link_additional_family(text,text,text) to anon;
 grant execute on function get_week_history(text) to anon;
+
+-- ============================================================
+-- MIGRATION 4 — remove / unlink family members
+-- Safe to re-run. Both roles can remove links they created,
+-- and the code owner can remove people who linked to them.
+-- ============================================================
+
+-- Remove a family link that *I* (p_phone) previously added via Add Family Member
+create or replace function unlink_family(p_phone text, p_code text)
+returns void
+language plpgsql security definer as $$
+begin
+  if not exists (select 1 from users u where u.phone = p_phone) then
+    raise exception 'USER_NOT_FOUND';
+  end if;
+  if not exists (
+    select 1 from caretaker_links cl
+    where cl.caretaker_phone = p_phone and cl.family_code = p_code
+  ) then
+    raise exception 'NOT_LINKED';
+  end if;
+  delete from caretaker_links
+  where caretaker_phone = p_phone and family_code = p_code;
+end;
+$$;
+
+-- Code owner removes someone who linked *to* their Family Code
+create or replace function remove_linked_member(p_owner_phone text, p_member_phone text)
+returns void
+language plpgsql security definer as $$
+declare
+  v_code text;
+begin
+  select u.family_code into v_code from users u where u.phone = p_owner_phone;
+  if v_code is null then
+    raise exception 'USER_NOT_FOUND';
+  end if;
+  if not exists (
+    select 1 from caretaker_links cl
+    where cl.family_code = v_code and cl.caretaker_phone = p_member_phone
+  ) then
+    raise exception 'NOT_LINKED';
+  end if;
+  delete from caretaker_links
+  where family_code = v_code and caretaker_phone = p_member_phone;
+end;
+$$;
+
+grant execute on function unlink_family(text,text)           to anon;
+grant execute on function remove_linked_member(text,text)    to anon;
