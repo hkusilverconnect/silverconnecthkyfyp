@@ -338,8 +338,8 @@ const I18N = {
 
     leaving: "⚠️ You're Leaving SilverConnect",
     aboutToVisit: "You're about to visit", on: 'on:',
-    thirdParty: 'This is an independent third-party website. SilverConnect does not operate this site and has no control over, and accepts no liability for, its content, availability, pricing, or any transaction you make there. Any purchase is solely a matter between you and that merchant.',
-    bankPractice: 'This notice follows the same practice used by Hong Kong banks when redirecting customers to third-party websites.',
+    thirdParty: 'SilverConnect may provide hyperlinks to websites of third parties ("Third-party Websites"). These Third-party Websites are not affiliated with or related to SilverConnect. Such hyperlinks are for your information only. SilverConnect accepts no liability, directly or indirectly, for your access to or use of (or inability to access or use) these Third-party Websites. Providing a hyperlink does not represent any recommendation, endorsement, approval, guarantee or introduction of any third party or any product or service, nor any co-operation with such third party, unless we expressly state otherwise in writing. SilverConnect is not a party to any contract you may enter into with a third party. You use these hyperlinks at your own risk and cost. We are not responsible for any loss, damage or consequence arising from your use of any such hyperlink, nor for the accuracy or truthfulness of Third-party Website contents.',
+    bankPractice: '',
     continue: 'Continue',
     picsTitle: '📄 Personal Information Collection Statement',
     backendTitle: 'One step left', backendSub: 'This app needs to be pointed at your Supabase project. Open config.js in this folder and paste in your Project URL and anon public key (Supabase → Project Settings → API), then reload this page.',
@@ -416,8 +416,8 @@ const I18N = {
 
     leaving: '⚠️ 您即將離開銀髮通',
     aboutToVisit: '您即將前往', on: '於：',
-    thirdParty: '此為獨立第三方網站。銀髮通並不營運此網站，亦無法控制其內容、可用性、價格或您在該處進行的任何交易，並不承擔任何責任。任何購買純屬您與該商戶之間的事宜。',
-    bankPractice: '此提示與香港銀行將客戶轉往第三方網站時的做法相同。',
+    thirdParty: '銀髮通可能提供通往第三方網站（「第三方網站」）的超連結。該等第三方網站與銀髮通並無附屬或相關關係。有關超連結僅供參考。銀髮通對您能否或如何存取及／或使用該等第三方網站，概不直接或間接承擔任何責任。提供超連結並不代表對任何第三方或其產品或服務作出推薦、認可、批准、保證或介紹，亦不代表與該第三方有任何合作，除非我們以書面另行明確說明。銀髮通並非您與第三方可能訂立的任何合約的一方。您使用上述超連結須自行承擔風險及費用。我們不會就因使用任何該等超連結而直接或間接引致的任何損失、損害或後果負責，亦不就第三方網站內容的準確性或真實性承擔責任。',
+    bankPractice: '',
     continue: '繼續',
     picsTitle: '📄 個人資料收集聲明',
     backendTitle: '還差一步', backendSub: '此應用程式需連接您的 Supabase 專案。請開啟本資料夾中的 config.js，貼上 Project URL 及 anon public key（Supabase → Project Settings → API），然後重新載入頁面。',
@@ -1137,38 +1137,77 @@ function renderAddFamilyModal(){
   </div>`;
 }
 
-/* ---------- Personal Information Collection Statement (PDPO / DPP) modal ---------- */
+/* ---------- Personal Information Collection Statement (PDPO) modal — CR-style structure ---------- */
 function renderPicsModal(){
   if(!picsOpen) return '';
+  const isZh = lang === 'zh';
+  const body = isZh ? `
+        <p>銀髮通（「我們」）根據香港法例第486章《個人資料（私隱）條例》（「《私隱條例》」）及其六項保障資料原則收集及處理個人資料。本《個人資料收集聲明》說明我們收集甚麼資料及用途，結構參考香港公營機構（如公司註冊處）的個人資料收集聲明做法。</p>
+
+        <h3>收集目的</h3>
+        <p>您向我們提供的個人資料將用於下列一項或多項目的：</p>
+        <p>(a) 開立及管理您的銀髮通帳戶（包括驗證登入身分）；</p>
+        <p>(b) 產生及管理用於連結長者與照顧者帳戶的家庭代碼；</p>
+        <p>(c) 營運每日「我很好」簽到及心情分享功能，並僅向已透過有效家庭代碼連結的家庭成員顯示相關狀態；</p>
+        <p>(d) 處理您就個人資料提出的查閱或改正要求，以及履行《私隱條例》下的法律責任；</p>
+        <p>(e) 在真正近實電子商務展示中提供經策劃的市場資訊（銀髮通本身不處理付款；外連商戶網站受第三方超連結條款規管）。</p>
+        <p>資料由您透過本應用程式直接提供，我們只在達致上述目的所需的範圍內以公平方式收集，不會超乎適度。</p>
+
+        <h3>所收集的資料類別</h3>
+        <p>我們收集：姓名、電話號碼、角色（長者／照顧者）、經密碼雜湊處理的個人識別碼（PIN，不以明文儲存）、家庭代碼、帳戶及連結時間戳、簽到時間戳，以及您選擇分享的心情表情符號／標籤。我們<strong>不</strong>收集精確位置、通訊錄、政府身分證明文件號碼或付款卡資料。</p>
+
+        <h3>資料的保留及準確性</h3>
+        <p>請確保您的姓名及電話號碼正確及最新。帳戶資料在帳戶有效期間保留；簽到及心情紀錄在提供家庭狀態功能所需期間保留，帳戶關閉或應要求後可予刪除或匿名化。</p>
+
+        <h3>資料的使用及披露（受讓人類別）</h3>
+        <p>您的個人資料只會用於本聲明所述目的。簽到及心情更新<strong>只</strong>會與已透過有效家庭代碼連結的家庭成員分享，不會用於無關第三方的直接促銷，亦不會在您僅瀏覽我們的市場資訊時傳輸予 Amazon、Klook 等外連商戶。</p>
+        <p>除下列情況外，我們不會向其他人士披露您的個人資料：(a) 獲您同意；(b) 為履行法律責任或遵從法院／主管當局的合法要求；(c) 為設立、行使或抗辯法律申索而有需要。本示範部署由學生項目營運者管理；若日後正式商業營運，受讓人（如有）將在更新後的聲明中列明。</p>
+
+        <h3>保安</h3>
+        <p>PIN 在儲存前以業界標準密碼雜湊處理，不以明文保存。資料庫層面實施列級保安（Row Level Security），僅允許最少必要的操作讀取或寫入您的資料。</p>
+
+        <h3>查閱及改正</h3>
+        <p>根據《私隱條例》第18及22條，您有權要求查閱及改正我們持有的您的個人資料。請直接聯絡本銀髮通部署的帳戶持有人／營運者提出要求。我們會在《私隱條例》規定的時限內處理。</p>
+
+        <h3>重要聲明</h3>
+        <p><strong>本聲明為配合香港公司註冊處式《個人資料收集聲明》結構及《私隱條例》而擬備的示範範本，並不構成法律意見。</strong>在真實或商業用途前，應由合資格香港律師或私隱專業人士審閱及按實際機構、資料流及保留政策作出修訂，並填入真實聯絡資料以處理查閱／改正要求。</p>
+  ` : `
+        <p>SilverConnect ("we", "us") collects and handles personal data in accordance with the <strong>Personal Data (Privacy) Ordinance (Cap. 486)</strong> of Hong Kong (the "Ordinance") and its six Data Protection Principles. This Personal Information Collection Statement ("PICS") explains what we collect and why, in a structure consistent with Hong Kong public-sector PICS practice (e.g. Companies Registry style: purpose of collection, classes of data, classes of transferees, access and correction).</p>
+
+        <h3>Purpose of Collection</h3>
+        <p>Personal data you provide will be used by us for one or more of the following purposes:</p>
+        <p>(a) to create and administer your SilverConnect account (including verifying your identity when you log in);</p>
+        <p>(b) to generate and manage the Family Code used to link Senior and Caretaker accounts;</p>
+        <p>(c) to operate the daily "I'm Okay" check-in and mood-sharing features, and to display related status only to family members linked via a valid Family Code;</p>
+        <p>(d) to handle your requests for access to or correction of personal data, and to comply with our duties under the Ordinance;</p>
+        <p>(e) to present curated marketplace information in this genuine near-real e-commerce demonstration (SilverConnect does not process payments; outbound merchant sites are governed by the third-party hyperlink terms below).</p>
+        <p>Data is collected directly from you through this app, fairly and no more than is necessary for these purposes.</p>
+
+        <h3>Classes of Data Collected</h3>
+        <p>We collect: name, phone number, role (Senior / Caretaker), a cryptographically hashed PIN (never stored in plain text), Family Code, account and link timestamps, check-in timestamps, and optional mood emoji/label that you choose to share. We do <strong>not</strong> collect precise location, address-book contacts, government ID numbers, or payment-card data.</p>
+
+        <h3>Accuracy and Retention</h3>
+        <p>Please keep your name and phone number accurate and up to date. Account data is retained while your account remains active. Check-in and mood records are retained for as long as needed to provide the family-status features, after which they may be deleted or anonymised upon account closure or request.</p>
+
+        <h3>Use and Disclosure (Classes of Transferees)</h3>
+        <p>Your personal data is used only for the purposes stated in this PICS. Check-in and mood updates are shared <strong>only</strong> with family members linked to your account via a valid Family Code. They are not used for direct marketing to unrelated third parties, and are not transmitted to outbound merchants (e.g. Amazon, Klook) merely because you browse our marketplace listings.</p>
+        <p>We will not disclose your personal data to other persons except: (a) with your consent; (b) where required to comply with the law or a lawful request of a court or competent authority; or (c) where necessary for establishing, exercising or defending legal claims. This demonstration deployment is operated by the student project operators; any future commercial operator or transferee (if any) will be identified in an updated PICS.</p>
+
+        <h3>Security of Personal Data</h3>
+        <p>PINs are hashed with industry-standard cryptographic hashing before storage and are never stored in plain text. Access is restricted at the database level by Row Level Security; only the minimum functions needed may read or write your data.</p>
+
+        <h3>Access and Correction</h3>
+        <p>Under sections 18 and 22 of the Ordinance, you have the right to request access to, and correction of, your personal data held by us. Please make any such request to the account holder / operator of this SilverConnect deployment. We will handle requests within the timeframes required by the Ordinance.</p>
+
+        <h3>Important note</h3>
+        <p><strong>This PICS is a demonstration template aligned with Hong Kong PICS structure (including Companies Registry-style purpose / transferee / access sections) and the PDPO. It does not constitute legal advice.</strong> Before real-world or commercial use, it should be reviewed and customised by a qualified Hong Kong lawyer or data-privacy professional to reflect the actual organisation, data flows and retention practices, and to insert real contact details for data access and correction requests.</p>
+  `;
   return `
   <div class="modal-overlay" onclick="if(event.target===this) togglePics(false);">
     <div class="modal-box">
-      <h2>📄 Personal Information Collection Statement</h2>
-      <div class="pics-body">
-        <p>SilverConnect ("we", "us") collects and handles personal data in accordance with the <strong>Personal Data (Privacy) Ordinance (Cap. 486)</strong> of Hong Kong ("the Ordinance") and its six Data Protection Principles ("DPPs"). This statement explains what we collect and why.</p>
-
-        <h3>DPP1 — Purpose &amp; Manner of Collection</h3>
-        <p>We collect your name and phone number to create your account, verify your identity when you log in, generate and manage the Family Code used to link Senior and Caretaker accounts, and to operate the daily check-in and mood-sharing features. Data is collected directly from you through this app, fairly and no more than is necessary for these purposes.</p>
-
-        <h3>DPP2 — Accuracy &amp; Retention</h3>
-        <p>Please keep your name and phone number accurate and up to date. We retain account data for as long as your account remains active, and check-in/mood records for as long as needed to provide the family-status features, after which data may be deleted upon account closure or request.</p>
-
-        <h3>DPP3 — Use of Personal Data</h3>
-        <p>Your data is used only for the purposes stated above. ${t('imOkay')} and mood updates are shared only with family members linked to your account via a valid Family Code — never with unrelated third parties, and never for advertising. Product and tour listings link out to independent merchants (e.g. Amazon, Klook); we do not share your personal data with them by browsing our marketplace.</p>
-
-        <h3>DPP4 — Security of Personal Data</h3>
-        <p>PINs are never stored in plain text — they are hashed using industry-standard cryptographic hashing before being saved. Data access is restricted at the database level (Row Level Security), and only the minimum functions needed can read or write your data.</p>
-
-        <h3>DPP5 — Openness &amp; Transparency</h3>
-        <p>This statement is available at any time from the Login and Registration screens. We aim to be clear and specific about what is collected and why, in plain language.</p>
-
-        <h3>DPP6 — Access &amp; Correction</h3>
-        <p>You have the right to request access to, and correction of, your personal data held by us, in accordance with the Ordinance. To make such a request, contact the account holder/operator of this SilverConnect deployment directly.</p>
-
-        <h3>Important note</h3>
-        <p><strong>This statement is a template provided for demonstration purposes and does not constitute legal advice.</strong> Before real-world or commercial use, it should be reviewed and customised by a qualified Hong Kong lawyer or data-privacy professional to reflect your actual organisation, data flows, and retention practices, and to insert your organisation's real contact details for data access/correction requests.</p>
-      </div>
-      <button class="big-btn" onclick="togglePics(false)">Close</button>
+      <h2>${t('picsTitle')}</h2>
+      <div class="pics-body">${body}</div>
+      <button class="big-btn" onclick="togglePics(false)">${isZh ? '關閉' : 'Close'}</button>
     </div>
   </div>`;
 }
