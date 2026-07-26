@@ -331,6 +331,11 @@ const I18N = {
     familyCodeLabel: 'Family Code', linking: 'Linking…', link: 'Link',
     close: 'Close', cancel: 'Cancel',
     linkedTo: 'Linked to',
+    remove: 'Remove',
+    removeConfirm: 'Remove this family member?',
+    removed: 'Removed',
+    errNotLinked: 'Not linked to that family.',
+
     leaving: "⚠️ You're Leaving SilverConnect",
     aboutToVisit: "You're about to visit", on: 'on:',
     thirdParty: 'This is an independent third-party website. SilverConnect does not operate this site and has no control over, and accepts no liability for, its content, availability, pricing, or any transaction you make there. Any purchase is solely a matter between you and that merchant.',
@@ -404,6 +409,11 @@ const I18N = {
     familyCodeLabel: '家庭代碼', linking: '連結中…', link: '連結',
     close: '關閉', cancel: '取消',
     linkedTo: '已連結至',
+    remove: '移除',
+    removeConfirm: '確定移除此家庭成員？',
+    removed: '已移除',
+    errNotLinked: '尚未連結此家庭。',
+
     leaving: '⚠️ 您即將離開銀髮通',
     aboutToVisit: '您即將前往', on: '於：',
     thirdParty: '此為獨立第三方網站。銀髮通並不營運此網站，亦無法控制其內容、可用性、價格或您在該處進行的任何交易，並不承擔任何責任。任何購買純屬您與該商戶之間的事宜。',
@@ -481,6 +491,43 @@ async function submitAddFamily(){
   addFamSuccess = `${t('linkedTo')} ${(data && data[0] && data[0].senior_name) || (lang==='zh'?'家庭':'family')}!`;
   caretakerData = null; memberHistory = {}; // force refresh
   render();
+  loadCaretakerData();
+}
+
+/* ---------- Remove family link (both roles) ---------- */
+async function removeFamily(code){
+  if(busy || !code) return;
+  if(!confirm(t('removeConfirm'))) return;
+  busy = true; render();
+  const {error} = await sb.rpc('unlink_family', {p_phone: session.phone, p_code: code});
+  busy = false;
+  if(error){
+    const msg = (error.message || '').toString();
+    alert(msg.includes('NOT_LINKED') ? t('errNotLinked') : t('errGeneric'));
+    console.error('unlink_family', error);
+    render(); return;
+  }
+  caretakerData = null; memberHistory = {}; myCaretakers = null;
+  render();
+  loadCaretakerData();
+  loadMyCaretakers();
+}
+
+async function removeLinkedMember(memberPhone){
+  if(busy || !memberPhone) return;
+  if(!confirm(t('removeConfirm'))) return;
+  busy = true; render();
+  const {error} = await sb.rpc('remove_linked_member', {p_owner_phone: session.phone, p_member_phone: memberPhone});
+  busy = false;
+  if(error){
+    const msg = (error.message || '').toString();
+    alert(msg.includes('NOT_LINKED') ? t('errNotLinked') : t('errGeneric'));
+    console.error('remove_linked_member', error);
+    render(); return;
+  }
+  myCaretakers = null; caretakerData = null; memberHistory = {};
+  render();
+  loadMyCaretakers();
   loadCaretakerData();
 }
 
@@ -754,6 +801,8 @@ function heartbeatSenior(){
           <div class="fam-relation">${isIn?`${t('lastCheckIn')} ${tm}`:t('noCheckInYet')}</div>
           ${hist?renderWeekStrip(hist):'<div style="font-size:11px;color:var(--muted);margin-top:6px;">'+t('loadingHistory')+'</div>'}
         </div>
+        <button type="button" class="link-btn" style="width:auto;padding:6px 8px;margin:0;font-size:12px;color:var(--primary-dark);"
+          onclick="event.stopPropagation(); removeFamily('${d.family_code}')" title="${t('remove')}">${t('remove')}</button>
       </div>`;
     }).join('');
   return `
@@ -804,9 +853,11 @@ function heartbeatCaretaker(){
     <div class="fam-card" style="flex-wrap:wrap;">
       <div class="fam-emo ${isIn?'checked':'pending'}">${isIn?'😊':'⏰'}</div>
       <div class="fam-info"><div class="fam-name">${d.label || d.senior_name}</div>
-        <div class="fam-relation">${isIn?`${t('lastCheckIn')} ${tm}`:''+t('noCheckInYet')+''}</div>
+        <div class="fam-relation">${isIn?`${t('lastCheckIn')} ${tm}`:t('noCheckInYet')}</div>
         ${hist?renderWeekStrip(hist):'<div style="font-size:11px;color:var(--muted);margin-top:6px;">'+t('loadingHistory')+'</div>'}
       </div>
+      <button type="button" class="link-btn" style="width:auto;padding:6px 8px;margin:0;font-size:12px;color:var(--primary-dark);"
+        onclick="event.stopPropagation(); removeFamily('${d.family_code}')" title="${t('remove')}">${t('remove')}</button>
     </div>`;
   }).join('');
   const anyAlert = caretakerData.some(d=>!d.last_checkin);
@@ -832,7 +883,11 @@ function statusSenior(){
       if(d.senior_phone && !hist) loadMemberHistory(d.senior_phone);
       const hasMood = !!d.last_mood_emoji;
       return `<div class="card">
-        <div style="font-weight:800;font-size:13.5px;">${d.label||d.senior_name}${hasMood?` · ${d.last_mood_emoji} ${d.last_mood_label}`:''}</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;font-weight:800;font-size:13.5px;">${d.label||d.senior_name}${hasMood?` · ${d.last_mood_emoji} ${d.last_mood_label}`:''}</div>
+          <button type="button" class="link-btn" style="width:auto;padding:4px 8px;margin:0;font-size:12px;color:var(--primary-dark);"
+            onclick="removeFamily('${d.family_code}')">${t('remove')}</button>
+        </div>
         ${hist?renderWeekStrip(hist):'<div style="font-size:11px;color:var(--muted);">'+t('loading')+'</div>'}
       </div>`;
     }).join('');
@@ -883,6 +938,8 @@ function statusCaretaker(){
           <div style="font-weight:800; font-size:13.5px;">${d.label || d.senior_name}${hasMood?` · ${d.last_mood_label}`:''}</div>
           <div style="font-size:12px; color:var(--muted);">${hasMood?t('latestMood'):t('noMoodYet')}</div>
         </div>
+        <button type="button" class="link-btn" style="width:auto;padding:4px 8px;margin:0;font-size:12px;color:var(--primary-dark);"
+          onclick="removeFamily('${d.family_code}')">${t('remove')}</button>
       </div>
       ${hist?renderWeekStrip(hist):'<div style="font-size:11px;color:var(--muted);margin-top:8px;">'+t('loadingHistory')+'</div>'}
     </div>`;
@@ -995,7 +1052,12 @@ function renderApp(){
           <div class="code-mini">${session.familyCode.slice(0,3)} ${session.familyCode.slice(3)}</div>
           <div style="font-size:11px; color:var(--muted); font-weight:800; padding:6px 10px 2px;">${t('linkedCaretakers')}</div>
           <div style="padding:0 10px 8px; font-size:12.5px;">
-            ${myCaretakers===null ? t('loading') : myCaretakers.length===0 ? t('noneYet') : myCaretakers.map(c=>`<div style="padding:3px 0;">👤 ${c.name}</div>`).join('')}
+            ${myCaretakers===null ? t('loading') : myCaretakers.length===0 ? t('noneYet') : myCaretakers.map(c=>`
+              <div style="padding:3px 0;display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                <span>👤 ${c.name}</span>
+                <button type="button" class="link-btn" style="width:auto;padding:2px 6px;margin:0;font-size:11px;color:var(--primary-dark);"
+                  onclick="event.stopPropagation(); removeLinkedMember('${c.phone}')">${t('remove')}</button>
+              </div>`).join('')}
           </div>
           <button class="item" onclick="openAddFamily()">${t('addFamily')}</button>
           <hr>
